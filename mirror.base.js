@@ -188,10 +188,46 @@
         }
     })
     m.extend({
-        stringify: function (obj) {
-            return JSON.stringify(obj);
+        stringify: function (obj,deep) {
+            if(deep===undefined)
+                deep = 2;
+            if(!deep) return undefined;
+            if(m.isOne(obj,"Array")){
+                var buffer = [];
+                m.each(obj,function(i,value){
+                    buffer.push(m.stringify(value,deep-1));
+                });
+                return "["+buffer.join(",")+"]";
+            }else if(m.isOne(obj,"Object")){
+                var buffer = [];
+                m.each(obj,function(key,value){
+                    buffer.push(key+":"+m.stringify(value,deep-1));
+                });
+                return "{"+buffer.join(",")+"}";
+            }else if(m.isOne(obj,"Date")){
+                return "\""+obj+"\"";
+            }else if(m.isOne(obj,"Number")){
+                return String(obj);
+            }else if(m.isOne(obj,"Boolean")){
+                return String(obj);
+            }else {
+                return "\""+obj+"\"";
+            }
         }
     });
+    m.extend({
+        eval : (function(eval){
+            return function(data){
+                if(m.isOne(data,"String")){
+                    return eval(data)
+                }else if(m.isOne(data,"Function")) {
+                    return (data)();
+                }else{
+                    return data;
+                }
+            }
+        })(w.execScript||w.eval)
+    })
     var HashCache = {};
     m.extend({
         hashCode: function(obj){
@@ -227,6 +263,49 @@
             m.assertDefined(obj,e);
             m.assertNotNull(obj,e);
         }
+    });
+    var wrapMap = {
+            option: [ 1, "<select multiple='multiple'>", "</select>" ],
+            legend: [ 1, "<fieldset>", "</fieldset>" ],
+            thead: [ 1, "<table>", "</table>" ],
+            tr: [ 2, "<table><tbody>", "</tbody></table>" ],
+            td: [ 3, "<table><tbody><tr>", "</tr></tbody></table>" ],
+            col: [ 2, "<table><tbody></tbody><colgroup>", "</colgroup></table>" ],
+            area: [ 1, "<map>", "</map>" ],
+            _default: [ 0, "", "" ]
+        },
+        rleadingWhitespace = /^\s+/,
+        rxhtmlTag = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/gi,
+        rtagName = /<([\w:]+)/,
+        rhtml = /<|&#?\w+;/,
+        rscriptType =  /\/(java|ecma)script/i;
+    m.extend({
+       parseHTML : function(elem){
+           if ( rhtml.test( elem ) ) {
+               var safe =  document.createDocumentFragment();
+               var div = document.createElement("div");
+               safe.appendChild( div );
+               elem = elem.replace(rxhtmlTag, "<$1></$2>");
+               tag = ( rtagName.exec( elem ) || ["", ""] )[1].toLowerCase();
+               wrap = wrapMap[ tag ] || wrapMap._default;
+               depth = wrap[0];
+               div.innerHTML = wrap[1] + elem + wrap[2];
+               while ( depth-- ) {
+                   div = div.lastChild;
+               }
+               if ( !m.isIE8 && rleadingWhitespace.test( elem ) ) {
+                   div.insertBefore( document.createTextNode( rleadingWhitespace.exec(elem)[0] ), div.firstChild );
+               }
+               var scripts = div.getElementsByTagName("script");
+               m.each(scripts,function(i,value){
+                   value&&value.type&&rscriptType.test(value.type)&&value.parentNode&&value.parentNode.removeChild(value);
+               });
+               elem = div.childNodes;
+           }else{
+               elem = [document.createTextNode( elem )];
+           }
+           return elem;
+       }
     });
     window.mirror = m;
 })(window, document);
