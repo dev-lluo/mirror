@@ -1,5 +1,5 @@
 (function (m) {
-    var  Proxy = function(instance,accessors,fieldAccessor,methodAccessor){
+    var  __Proxy__ = function(instance,accessors,fieldAccessor,methodAccessor){
             this.__inst__ = instance;
             this.__accs__ = accessors;
             this.__facc__ = fieldAccessor;
@@ -15,6 +15,12 @@
         },
         methodAccessor ;
     if (m.isIE8) {
+        m.extend({
+            type : m.inject.before(m.type,function(jp){
+                jp.result = jp.args[0]&&jp.args[0].type____;
+                jp.resume = !jp.result;
+            })
+        });
         methodAccessor = function (instance, accessors, name) {
             return accessors[name].apply(instance, slice.call(arguments, 3));
         };
@@ -31,7 +37,7 @@
             ;
             return args.join(",");
         };
-        Proxy.prototype.create = function(){
+        __Proxy__.prototype.create = function(){
             var className = "VBClass"+m.UUID();
             var buffer = [
                 "Class "+className,
@@ -89,6 +95,9 @@
                 }
             });
             buffer.push(
+                "\tPublic Property Get type____",
+                "\t\ttype____ = \"__Proxy__\"",
+                "\tEnd Property",
                 "\tPublic Function serialize ()",
                 "\t\tserialize = window.stringify(inst)",
                 "\tEnd Function",
@@ -108,7 +117,7 @@
         methodAccessor = function (instance, accessors, name, args) {
             return accessors[name].apply(instance, args);
         };
-        Proxy.prototype.create = function(){
+        __Proxy__.prototype.create = function(){
             var self = this;
             var desc = {};
             m.each(self.__inst__,function(key,value){
@@ -140,8 +149,10 @@
         };
     }
     m.extend({
-        mock: function (instance, accessors) {
-            return new Proxy(instance, accessors,fieldAccessor,methodAccessor).create();
+        defObject: function (instance, accessors) {
+            return new __Proxy__(instance, accessors,fieldAccessor,methodAccessor).create();
         }
     });
+
+    var rawObject = {};
 })(mirror);
