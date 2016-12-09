@@ -21,6 +21,18 @@
                 jp.resume = !jp.result;
             })
         });
+        m.extend({
+            hashCode : m.inject.before(m.hashCode,function(jp){
+                jp.result = jp.args[0]&&jp.args[0].type____&&jp.args[0].hashCode();
+                jp.resume = !jp.result;
+            })
+        })
+        m.extend({
+            stringify : m.inject.before(m.stringify,function(jp){
+                jp.result = jp.args[0]&&jp.args[0].type____&&jp.args[0].serialize();
+                jp.resume = !jp.result;
+            })
+        })
         methodAccessor = function (instance, accessors, name) {
             return accessors[name].apply(instance, slice.call(arguments, 3));
         };
@@ -99,7 +111,10 @@
                 "\t\ttype____ = \"__Proxy__\"",
                 "\tEnd Property",
                 "\tPublic Function serialize ()",
-                "\t\tserialize = window.stringify(inst)",
+                "\t\tserialize = mirror.stringify(inst)",
+                "\tEnd Function",
+                "\tPublic Function hashCode ()",
+                "\t\thashCode = mirror.hashCode(inst)",
                 "\tEnd Function",
                 "End Class"
             );
