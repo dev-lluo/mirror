@@ -169,5 +169,27 @@
         }
     });
 
-    var rawObject = {};
+    var rawCache = {},
+        mock = function(obj){
+            if(m.isOne(obj,"Object")){
+                return mockObject(obj);
+            }else if(m.isOne(obj,"Array")){
+                return mockArray(obj);
+            }else{
+                return obj;
+            }
+        },
+        mockObject = function(obj){
+            m.each(obj,function(key,value){
+
+            });
+        },
+        mockArray = function(obj){
+
+        };
+    m.extend({
+        mock : function(obj){
+            return rawCache[rawObject.hashCode(obj)]||(rawCache[rawObject.hashCode(obj)] = mock(obj))
+        }
+    })
 })(mirror);

@@ -168,14 +168,18 @@
         each:(function(){
             var access = function(indexing,value,func){
                 return (value?func.call(value,indexing,value):func(indexing,value))===false;
+            },doFilter = function(indexing,value,filter){
+                return !!filter||(value?filter.call(value,indexing,value):filter(indexing,value))===false;
             };
-            return function(data,func){
+            return function(data,func,filter){
                 if(m.isOne(data,"Array")){
                     for(var i = 0;i<data.length;i++){
+                        if(doFilter(i,data[i],filter))continue;
                         if(access(i,data[i],func))break;
                     }
                 }else{
                     for(var ky in data){
+                        if(doFilter(ky,data[ky],filter))continue;
                         if(access(ky,data[ky],func))break;
                     }
                 }
@@ -202,6 +206,8 @@
                 var buffer = [];
                 m.each(obj,function(key,value){
                     buffer.push(key+":"+m.stringify(value,deep-1));
+                },function(key){
+                    return key!=="__hash__";
                 });
                 return "{"+buffer.join(",")+"}";
             }else if(m.isOne(obj,"Date")){
@@ -228,22 +234,24 @@
             }
         })(w.execScript||w.eval)
     })
-    var HashCache = {};
+    var HashCache = {},hashCode = function(objStr){
+        var seed = 5381,i = objStr.length - 1;
+        for (; i > -1; i--)
+            seed += (seed << 5) + objStr.charCodeAt(i);
+        var value = seed & 0x7FFFFFFF;
+        var hash = [];
+        do{
+            hash.push(I64BIT_TABLE[value & 0x3F]);
+        }while(value >>= 6);
+        return hash.join("");
+    };
     m.extend({
         hashCode: function(obj){
-            var objStr = m.stringify(obj);
-            if(HashCache[objStr])
-                return HashCache[objStr];
-            else{
-                var seed = 5381,i = objStr.length - 1;
-                for (; i > -1; i--)
-                    seed += (seed << 5) + objStr.charCodeAt(i);
-                var value = seed & 0x7FFFFFFF;
-                var hash = [];
-                do{
-                    hash.push(I64BIT_TABLE[value & 0x3F]);
-                }while(value >>= 6);
-                return HashCache[objStr] = hash.join("");
+            if(m.isOne(obj,"Object")||m.isOne(obj,"Array")){
+                return obj.__hash__||(obj.__hash__=hashCode(m.stringify(obj)+hashCode(new Date())))
+            }else{
+                var objStr = m.stringify(obj);
+                return HashCache[objStr]||(HashCache[objStr]=hashCode(objStr));
             }
         }
     });
