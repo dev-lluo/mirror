@@ -15,24 +15,21 @@
         },
         methodAccessor ;
     if (m.isIE8) {
-        m.extend({
-            type : m.inject.before(m.type,function(jp){
-                jp.result = jp.args[0]&&jp.args[0].type____;
-                jp.resume = !jp.result;
-            })
-        });
-        m.extend({
-            hashCode : m.inject.before(m.hashCode,function(jp){
-                jp.result = jp.args[0]&&jp.args[0].type____&&jp.args[0].hashCode();
-                jp.resume = !jp.result;
-            })
-        })
-        m.extend({
-            stringify : m.inject.before(m.stringify,function(jp){
-                jp.result = jp.args[0]&&jp.args[0].type____&&jp.args[0].serialize();
-                jp.resume = !jp.result;
-            })
-        })
+        m.inject(m).before("type",function(jp){
+            jp.result = jp.args[0]&&jp.args[0].type____;
+            jp.resume = !jp.result;
+        }).before("each",function(){
+            if(jp.args[0]&&jp.args[0].type____){
+                jp.args[0].each(jp.args[1]||function(){},jp.args[2]||function(){});
+                jp.resume = false;
+            }
+        }).before("hashCode",function(jp){
+            jp.result = jp.args[0]&&jp.args[0].type____&&jp.args[0].hashCode();
+            jp.resume = !jp.result;
+        }).before("stringify",function(jp){
+            jp.result = jp.args[0]&&jp.args[0].type____&&jp.args[0].serialize();
+            jp.resume = !jp.result;
+        }).flush();
         methodAccessor = function (instance, accessors, name) {
             return accessors[name].apply(instance, slice.call(arguments, 3));
         };
@@ -116,6 +113,9 @@
                 "\tPublic Function hashCode ()",
                 "\t\thashCode = mirror.hashCode(inst)",
                 "\tEnd Function",
+                "\tPublic Function each(func,filter)",
+                "\t\tmirror.each(inst,func,filter)",
+                "\tEnd Function",
                 "End Class"
             );
             m.window.parseVB(buffer.join("\r\n"));
@@ -170,26 +170,137 @@
     });
 
     var rawCache = {},
-        mock = function(obj){
+        hookCache = {},
+        mock = function(obj,hash){
             if(m.isOne(obj,"Object")){
-                return mockObject(obj);
+                return mockObject(obj,hash);
             }else if(m.isOne(obj,"Array")){
-                return mockArray(obj);
+                return mockArray(obj,hash);
             }else{
                 return obj;
             }
         },
-        mockObject = function(obj){
+        mockObject = function(obj,hash){
+            var desc = {};
+            var hook = {};
             m.each(obj,function(key,value){
-
+                hook[key] = {
+                    before : [],
+                    after  : []
+                };
+                desc[key] = {
+                    get : function() {
+                        return this[key];
+                    },
+                    set : function(val) {
+                        var resume = true;
+                        for(var i = 0;i<hook[key].before.length;i++){
+                            if((resume = (hook[key].before[i])(val))===false){
+                                break;
+                            }
+                        }
+                        if(resume){
+                            this[key] = val;
+                            for(var i = 0;i<hook[key].after.length;i++){
+                                (hook[key].after[i])(val);
+                            }
+                        }
+                    }
+                };
+                obj[key] = m.mock(value);
             });
+            hookCache[hash] = hook;
+            return m.defObject(obj,desc);
         },
-        mockArray = function(obj){
-
+        mockArray = function(obj,hash){
+            var hook = {
+                add : {before:[],after:[]},
+                del : {before:[],after:[]},
+                srt : {before:[],after:[]},
+                set : {before:[],after:[]}
+            };
+            m.inject(obj).before("pop",function(jp){
+                var resume = true;
+                var mockEvent = {
+                    type:"del",
+                    index:jp.proxy.length-1,
+                    target:jp.proxy[jp.proxy.length-1],
+                    owner:jp.proxy
+                };
+                for(var i = 0;i<hook.del.before.length;i++){
+                    if((resume = (hook.del.before[i])(mockEvent))===false){
+                        break;
+                    }
+                }
+                if(resume){
+                    jp.invoke();
+                    for(var i = 0;i<hook.del.after.length;i++){
+                        (hook.del.after[i])(mockEvent);
+                    }
+                }
+            }).before("shift",function(jp){
+                var resume = true;
+                var mockEvent = {
+                    type:"del",
+                    index:0,
+                    target:jp.proxy[0],
+                    owner:jp.proxy
+                };
+                for(var i = 0;i<hook.del.before.length;i++){
+                    if((resume = (hook.del.before[i])(mockEvent))===false){
+                        break;
+                    }
+                }
+                if(resume){
+                    jp.invoke();
+                    for(var i = 0;i<hook.del.after.length;i++){
+                        (hook.del.after[i])(mockEvent);
+                    }
+                }
+            }).before("push",function(jp){
+                var resume = true;
+                var mockEvent = {
+                    type:"add",
+                    index:jp.proxy.length,
+                    target:jp.args,
+                    owner:jp.proxy
+                };
+                for(var i = 0;i<hook.add.before.length;i++){
+                    if((resume = (hook.add.before[i])(mockEvent))===false){
+                        break;
+                    }
+                }
+                if(resume){
+                    jp.invoke();
+                    for(var i = 0;i<hook.del.after.length;i++){
+                        (hook.add.after[i])(mockEvent);
+                    }
+                }
+            }).before("unshift",function(jp){
+                var resume = true;
+                var mockEvent = {
+                    type:"add",
+                    index:0,
+                    target:jp.args,
+                    owner:jp.proxy
+                };
+                for(var i = 0;i<hook.add.before.length;i++){
+                    if((resume = (hook.add.before[i])(mockEvent))===false){
+                        break;
+                    }
+                }
+                if(resume){
+                    jp.invoke();
+                    for(var i = 0;i<hook.del.after.length;i++){
+                        (hook.add.after[i])(mockEvent);
+                    }
+                }
+            }).flush();
         };
     m.extend({
         mock : function(obj){
-            return rawCache[rawObject.hashCode(obj)]||(rawCache[rawObject.hashCode(obj)] = mock(obj))
+            var hash = rawObject.hashCode(obj);
+            return rawCache[hash]||(rawCache[hash] = mock(obj,hash))
         }
     })
 })(mirror);
