@@ -169,7 +169,7 @@
             var access = function(indexing,value,func){
                 return (value?func.call(value,indexing,value):func(indexing,value))===false;
             },doFilter = function(indexing,value,filter){
-                return !!filter||(value?filter.call(value,indexing,value):filter(indexing,value))===false;
+                return !!filter&&(value?filter.call(value,indexing,value):filter(indexing,value))===false;
             };
             return function(data,func,filter){
                 if(m.isOne(data,"Array")){
@@ -216,6 +216,8 @@
                 return String(obj);
             }else if(m.isOne(obj,"Boolean")){
                 return String(obj);
+            }else if(m.isOne(obj,"Function")) {
+                return String(obj).replace(/([\r\n])\s*/g,"");
             }else {
                 return "\""+obj+"\"";
             }
@@ -256,6 +258,11 @@
         }
     });
     m.extend({
+       equals: function (obj1, obj2) {
+           return obj1==obj2||m.hashCode(obj1)===m.hashCode(obj2);
+       }
+    });
+    m.extend({
         trim: function(str){
             return str.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
         }
@@ -270,6 +277,12 @@
         assertValid:function(obj,e){
             m.assertDefined(obj,e);
             m.assertNotNull(obj,e);
+        },
+        assertTrue:function (obj, e) {
+            if(obj===false)throw  e||"expression result is false...";
+        },
+        assertFalse:function(obj,e){
+            if(obj===true)throw e||"expression result is true...";
         }
     });
     var wrapMap = {

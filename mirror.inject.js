@@ -2,30 +2,33 @@
  * Created by devll on 2016/12/7.
  */
 (function(m){
+    var __Inject__ = function (obj) {
+        this.__obj__ = obj;
+    };
+    m.extend(__Inject__.prototype,{
+        flush:function(){
+            this.__obj__ = undefined;
+        },
+        before:function(funcName,injFunc){
+            this.__obj__[funcName] = m.inject.before(this.__obj__[funcName],injFunc);
+            return this;
+        },
+        after:function(funcName,injFunc){
+            this.__obj__[funcName] = m.inject.after(this.__obj__[funcName],injFunc);
+            return this;
+        },
+        around:function(funcName,injFunc){
+            this.__obj__[funcName] = m.inject.around(this.__obj__[funcName],injFunc);
+            return this;
+        },
+        throwing:function (funcName,injFunc) {
+            this.__obj__[funcName] = m.inject.throwing(this.__obj__[funcName],injFunc);
+            return this;
+        }
+    });
     m.extend({
         inject:function(obj){
-            return {
-                __obj__:obj,
-                flush:function(){
-                    this.__obj__ = undefined;
-                },
-                before:function(funcName,injFunc){
-                    this.__obj__[funcName] = m.inject.before(this.__obj__[funcName],injFunc);
-                    return this;
-                },
-                after:function(funcName,injFunc){
-                    this.__obj__[funcName] = m.inject.after(this.__obj__[funcName],injFunc);
-                    return this;
-                },
-                around:function(funcName,injFunc){
-                    this.__obj__[funcName] = m.inject.around(this.__obj__[funcName],injFunc);
-                    return this;
-                },
-                throwing:function (funcName,injFunc) {
-                    this.__obj__[funcName] = m.inject.throwing(this.__obj__[funcName],injFunc);
-                    return this;
-                }
-            };
+            return new __Inject__(obj);
         }
     });
     m.extend(m.inject,{
