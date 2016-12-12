@@ -120,6 +120,11 @@
         }
     })();
     /**************patch******************/
+    m.extend({
+        now : function(){
+            return Date.now?Date.now():new Date().getTime();
+        }
+    })
     var I64BIT_TABLE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     m.extend({
         UUID: function () {
@@ -285,6 +290,8 @@
             if(obj===true)throw e||"expression result is true...";
         }
     });
+
+    //from jquery
     var wrapMap = {
             option: [ 1, "<select multiple='multiple'>", "</select>" ],
             legend: [ 1, "<fieldset>", "</fieldset>" ],
@@ -327,6 +334,55 @@
            }
            return elem;
        }
+    });
+    m.extend({
+        parseXML: function( data ) {
+            if ( typeof data !== "string" || !data ) {
+                return null;
+            }
+            var xml, tmp;
+            try {
+                if ( window.DOMParser ) { // Standard
+                    tmp = new DOMParser();
+                    xml = tmp.parseFromString( data , "text/xml" );
+                } else { // IE
+                    xml = new ActiveXObject( "Microsoft.XMLDOM" );
+                    xml.async = "false";
+                    xml.loadXML( data );
+                }
+            } catch( e ) {
+                xml = undefined;
+            }
+            if ( !xml || !xml.documentElement || xml.getElementsByTagName( "parsererror" ).length ) {
+                throw "Invalid XML: " + data;
+            }
+            return xml;
+        }
+    });
+    var rvalidchars = /^[\],:{}\s]*$/,
+        rvalidescape = /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g,
+        rvalidtokens = /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g,
+        rvalidbraces = /(?:^|:|,)(?:\s*\[)+/g;
+    m.extend({
+        parseJSON: function( data ) {
+            if ( typeof data !== "string" || !data ) {
+                return null;
+            }
+            data = m.trim( data );
+
+            // Attempt to parse using the native JSON parser first
+            if ( window.JSON && window.JSON.parse ) {
+                return window.JSON.parse( data );
+            }
+            // Make sure the incoming data is actual JSON
+            // Logic borrowed from http://json.org/json2.js
+            if ( rvalidchars.test( data.replace( rvalidescape, "@" )
+                    .replace( rvalidtokens, "]" )
+                    .replace( rvalidbraces, "")) ) {
+                return ( new Function( "return " + data ) )();
+            }
+            throw "Invalid JSON: " + data ;
+        }
     });
     window.mirror = m;
 })(window, document);
