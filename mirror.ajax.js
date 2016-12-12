@@ -7,10 +7,11 @@
         config = {
             url: location.href,
             global: true,
-            type: "GET",
+            method: "GET",
             contentType: "application/x-www-form-urlencoded",
             processData: true,
             async: true,
+            timeout: 10000,
             xhr: function () {
                 return new window.XMLHttpRequest();
             },
@@ -36,7 +37,22 @@
         ajax: function (config) {
             var s = m.ajaxSetup(config || {});
             s.url = s.url.replace( rhash, "" );
+            var xhr = s.xhr();
+            xhr.timeout = s.timeout;
+            xhr.onreadystatechange = function (e) {
+                if (this.readyState == 4 && this.status == 200) {
 
+                }else if(this.readyState == 2 && this.status == 200){
+                    if(this.getResponseHeader("Content-Type")==""){
+
+                    }
+                }
+            };
+            if(s.username){
+                xhr.open(s.method,s.url,s.async,s.username,s.password);
+            }else{
+                xhr.open(s.method,s.url.s.async);
+            }
         }
     });
 })(window.mirror);
