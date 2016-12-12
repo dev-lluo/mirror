@@ -178,6 +178,74 @@
                 return obj;
             }
         },
+        eventFactory = {
+            get : function (owner,indexing) {
+                return {
+                    type : "get",
+                    indexing : indexing,
+                    value : owner[indexing],
+                    owner : owner,
+                    destroy : function(){
+                        this.type = this.indexing = this.value = this.owner = undefined;
+                    }
+                };
+            },
+            set : function (owner,indexing,value) {
+                return {
+                    type : "set",
+                    indexing : indexing,
+                    oldValue : owner[indexing],
+                    value : value,
+                    owner : owner,
+                    destroy : function(){
+                        this.type = this.indexing = this.oldValue = this.value = this.owner = undefined;
+                    }
+                };
+            },
+            del : function (owner,indexing) {
+                return {
+                    type : "del",
+                    indexing : indexing,
+                    value : owner[indexing],
+                    owner : owner,
+                    destroy : function(){
+                        this.type = this.indexing = this.value = this.owner = undefined;
+                    }
+                };
+            },
+            add : function (owner,indexing,value) {
+                return {
+                    type : "add",
+                    indexing : indexing,
+                    value : value,
+                    owner : owner,
+                    destroy : function(){
+                        this.type = this.indexing = this.value = this.owner = undefined;
+                    }
+                };
+            },
+            srt : function (owner) {
+                return {
+                    type : "srt",
+                    owner : owner,
+                    destroy : function(){
+                        this.type = this.owner = undefined;
+                    }
+                };
+            }
+        },
+        hookExecutor = function(hook,type,event,joinPoint){
+            for (var i = 0; i < hook[type].before.length; i++) {
+                if ((hook[type].before[i])(event) === false) {
+                    return;
+                }
+            }
+            joinPoint.invoke();
+            for (var i = 0; i < hook[type].after.length; i++) {
+                (hook[type].after[i])(event);
+            }
+            event.destroy();
+        },
         mockObject = function (obj, hash) {
             var desc = {};
             var hook = hookCache[hash] = {};
@@ -188,48 +256,17 @@
                 };
                 desc[key] = {
                     get: function () {
-                        var resume = true;
-                        var mockEvent = {
-                            type: "get",
-                            key: key,
-                            value: this[key],
-                            owner: this
-                        };
-                        for (var i = 0; i < hook[key].get.before.length; i++) {
-                            if ((resume = (hook[key].get.before[i])(mockEvent)) === false) {
-                                break;
-                            }
-                        }
-                        if (resume) {
-                            var ret = this[key];
-                            for (var i = 0; i < hook[key].get.after.length; i++) {
-                                (hook[key].get.after[i])(mockEvent);
-                            }
-                            return ret;
-                        }
+                        return this[key];
                     },
                     set: function (val) {
-                        var resume = true;
-                        var mockEvent = {
-                            type: "set",
-                            key: key,
-                            oldValue: this[key],
-                            value: val,
-                            owner: this
-                        };
-                        for (var i = 0; i < hook[key].set.before.length; i++) {
-                            if ((resume = (hook[key].set.before[i])(mockEvent)) === false) {
-                                break;
-                            }
-                        }
-                        if (resume) {
-                            this[key] = val;
-                            for (var i = 0; i < hook[key].set.after.length; i++) {
-                                (hook[key].set.after[i])(mockEvent);
-                            }
-                        }
+                        this[key] = val;
                     }
                 };
+                m.inject(desc[key]).around("get",function(jp){
+                    hookExecutor(hook[key],"get",eventFactory.get(this,key),jp);
+                }).around("set",function(jp){
+                    hookExecutor(hook[key],"set",eventFactory.set(this,key,jp.args[0]),jp);
+                });
             });
             return m.defObject(obj, desc);
         },
@@ -238,141 +275,25 @@
                 add: {before: [], after: []},
                 del: {before: [], after: []},
                 srt: {before: [], after: []},
-                set: {before: [], after: []}
+                set: {before: [], after: []},
+                get: {before: [], after: []}
             };
             m.inject(obj).around("pop", function (jp) {
-                var resume = true;
-                var mockEvent = {
-                    type: "del",
-                    index: jp.proxy.length - 1,
-                    target: jp.proxy[jp.proxy.length - 1],
-                    owner: jp.proxy
-                };
-                for (var i = 0; i < hook.del.before.length; i++) {
-                    if ((resume = (hook.del.before[i])(mockEvent)) === false) {
-                        break;
-                    }
-                }
-                if (resume) {
-                    jp.invoke();
-                    for (var i = 0; i < hook.del.after.length; i++) {
-                        (hook.del.after[i])(mockEvent);
-                    }
-                }
+                hookExecutor(hook,"del",eventFactory.del(this,jp.proxy.length - 1),jp);
             }).around("shift", function (jp) {
-                var resume = true;
-                var mockEvent = {
-                    type: "del",
-                    index: 0,
-                    target: jp.proxy[0],
-                    owner: jp.proxy
-                };
-                for (var i = 0; i < hook.del.before.length; i++) {
-                    if ((resume = (hook.del.before[i])(mockEvent)) === false) {
-                        break;
-                    }
-                }
-                if (resume) {
-                    jp.invoke();
-                    for (var i = 0; i < hook.del.after.length; i++) {
-                        (hook.del.after[i])(mockEvent);
-                    }
-                }
+                hookExecutor(hook,"del",eventFactory.del(this,0),jp);
             }).around("push", function (jp) {
-                var resume = true;
-                var mockEvent = {
-                    type: "add",
-                    index: jp.proxy.length,
-                    target: jp.args,
-                    owner: jp.proxy
-                };
-                for (var i = 0; i < hook.add.before.length; i++) {
-                    if ((resume = (hook.add.before[i])(mockEvent)) === false) {
-                        break;
-                    }
-                }
-                if (resume) {
-                    jp.invoke();
-                    for (var i = 0; i < hook.add.after.length; i++) {
-                        (hook.add.after[i])(mockEvent);
-                    }
-                }
+                hookExecutor(hook,"add",eventFactory.add(this,jp.proxy.length,jp.args),jp);
             }).around("unshift", function (jp) {
-                var resume = true;
-                var mockEvent = {
-                    type: "add",
-                    index: 0,
-                    target: jp.args,
-                    owner: jp.proxy
-                };
-                for (var i = 0; i < hook.add.before.length; i++) {
-                    if ((resume = (hook.add.before[i])(mockEvent)) === false) {
-                        break;
-                    }
-                }
-                if (resume) {
-                    jp.invoke();
-                    for (var i = 0; i < hook.add.after.length; i++) {
-                        (hook.add.after[i])(mockEvent);
-                    }
-                }
+                hookExecutor(hook,"add",eventFactory.add(this,0,jp.args),jp);
             }).around("reverse", function (jp) {
-                var resume = true;
-                var mockEvent = {
-                    type: "srt",
-                    index: 0,
-                    target: jp.args,
-                    owner: jp.proxy
-                };
-                for (var i = 0; i < hook.srt.before.length; i++) {
-                    if ((resume = (hook.srt.before[i])(mockEvent)) === false) {
-                        break;
-                    }
-                }
-                if (resume) {
-                    jp.invoke();
-                    for (var i = 0; i < hook.srt.after.length; i++) {
-                        (hook.srt.after[i])(mockEvent);
-                    }
-                }
+                hookExecutor(hook,"srt",eventFactory.srt(this),jp);
             }).around("sort", function (jp) {
-                var resume = true;
-                var mockEvent = {
-                    type: "srt",
-                    index: 0,
-                    target: jp.args,
-                    owner: jp.proxy
-                };
-                for (var i = 0; i < hook.srt.before.length; i++) {
-                    if ((resume = (hook.srt.before[i])(mockEvent)) === false) {
-                        break;
-                    }
-                }
-                if (resume) {
-                    jp.invoke();
-                    for (var i = 0; i < hook.srt.after.length; i++) {
-                        (hook.srt.after[i])(mockEvent);
-                    }
-                }
+                hookExecutor(hook,"srt",eventFactory.srt(this),jp);
             }).around("set", function (jp) {
-                var resume = true;
-                var mockEvent = {
-                    type: "set",
-                    index: jp.args[0],
-                    target: jp.args[1],
-                    owner: jp.proxy
-                };
-                for (var i = 0; i < hook.set.before.length; i++) {
-                    if ((resume = (hook.set.before[i])(mockEvent)) === false) {
-                        break;
-                    }
-                }
-                if (resume) {
-                    jp.invoke();
-                    for (var i = 0; i < hook.set.after.length; i++) {
-                        (hook.set.after[i])(mockEvent);
-                    }
-                }
+                hookExecutor(hook,"set",eventFactory.set(this,jp.args[0],jp.args[1]),jp);
+            }).around("get", function(jp){
+                hookExecutor(hook,"get",eventFactory.get(this,jp.args[0]),jp);
             }).flush();
             return obj;
         };
@@ -382,6 +303,9 @@
             return rawCache[hash] || (rawCache[hash] = mock(obj, hash))
         }
     });
+    var watch = function(hook,type,cut,func){
+        hook[type][cut].push(func);
+    };
     m.extend({
         watch: function (obj, type,cut, func, prop) {
             var hash = m.hashCode(obj);
@@ -389,59 +313,44 @@
             var hook = hookCache[hash];
             if(mirror.isOne(obj,"Object")){
                 if(prop){
-                    hook[prop][type][cut].push(func);
+                    watch(hook[prop],type,cut,func);
                 }else{
                     m.each(hook,function(key,value){
-                        value[type][cut].push(func);
+                        watch(value,type,cut,func);
                     });
                 }
             }else {
-                hook[type][cut].push(func);
+                watch(hook,type,cut,func);
             }
         }
     });
+    var unwatch = function(hook,type,cut,func){
+        var removeIndex;
+        m.each(hook[type][cut],function(index,cpFunc){
+            if(m.equals(func,cpFunc)){
+                removeIndex = index;
+                return false;
+            }
+        })
+        if(removeIndex!==undefined){
+            hook[type][cut].splice(removeIndex,1);
+        }
+    };
     m.extend({
-        unwatch: function (obj, cut,type, func, prop) {
+        unwatch: function (obj,type, cut, func, prop) {
             var hash = m.hashCode(obj);
             m.assertTrue(hash in rawCache,"object must be a MockObject");
             var hook = hookCache[hash];
             if(mirror.isOne(obj,"Object")){
                 if(prop){
-                    var removeIndex;
-                    m.each(hook[prop][type][cut],function(index,cpFunc){
-                       if(m.equals(func,cpFunc)){
-                           removeIndex = index;
-                           return false;
-                       }
-                    });
-                    if(removeIndex){
-                        hook[prop][type][cut].splice(removeIndex,1);
-                    }
+                    unwatch(hook[prop],type,cut,func);
                 }else{
                     m.each(hook,function(key,value){
-                        var removeIndex;
-                        m.each(value[type][cut],function(index,cpFunc){
-                            if(m.equals(func,cpFunc)){
-                                removeIndex = index;
-                                return false;
-                            }
-                        });
-                        if(removeIndex){
-                            hook[prop][type][cut].splice(removeIndex,1);
-                        }
+                        unwatch(value,type,cut,func);
                     });
                 }
             }else {
-                var removeIndex;
-                m.each(hook[type][cut],function(index,cpFunc){
-                    if(m.equals(func,cpFunc)){
-                        removeIndex = index;
-                        return false;
-                    }
-                })
-                if(removeIndex){
-                    hook[prop][type][cut].splice(removeIndex,1);
-                }
+                unwatch(hook,type,cut,func);
             }
         }
     })

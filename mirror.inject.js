@@ -59,13 +59,14 @@
             return function(){
                 var joinPoint = {
                     invoke : function(){
-                        return this.func.apply(this.proxy,this.args);
+                        return this.result = this.func.apply(this.proxy,this.args);
                     },
                     func : func,
                     args : arguments,
+                    result : undefined,
                     proxy : this
                 };
-                return proxy.apply(this,[joinPoint]);
+                return proxy.apply(this,[joinPoint])||joinPoint.result;
             };
         },
         throwing: function(func,proxy){

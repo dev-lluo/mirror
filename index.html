@@ -6,6 +6,40 @@
     <script src="mirror.base.js"></script>
     <script src="mirror.inject.js"></script>
     <script src="mirror.mock.js"></script>
+    <script>
+        var mockObject = mirror.mock({name:"x",age:23,friends:["lz","xh","zy"]});
+        mirror.watch(mockObject,"set","before",function (event) {
+            if(event.value!="xhh") return false;
+        },"name");
+        mirror.watch(mockObject,"set","before",function (event) {
+            console.log(event);
+        });
+        mirror.watch(mockObject,"get","before",function (event) {
+            console.log(event);
+        });
+        mirror.watch(mockObject,"set","before",function (event) {
+            mirror.assertTrue(mirror.isOne(event.value,"Number"));
+        },"age");
+        mirror.unwatch(mockObject,"set","before",function (event) {
+            if(event.value!="xhh") return false;
+        },"name");
+        var mockArray = mirror.mock(mockObject.friends);
+        mirror.watch(mockArray,"add","before",function(event){
+           console.log(event);
+        });
+        mirror.watch(mockArray,"del","before",function(event){
+            console.log(event);
+        });
+        mirror.watch(mockArray,"set","before",function(event){
+            if(event.oldValue==="lz")return false;
+        });
+        mirror.watch(mockArray,"get","before",function(event){
+            console.log(event);
+        });
+        mirror.watch(mockArray,"srt","before",function(event){
+            console.log(event);
+        });
+    </script>
 </head>
 <body>
 
