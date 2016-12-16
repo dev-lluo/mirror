@@ -5,6 +5,8 @@
     var logEvent = function (event) {
             m.log(event);
         },
+        ajaxCache = {},
+        noCache = /^no-(cache|store)$/ig;
         //from jquery
         rhash = /#.*$/,
         defaultConfig = {
@@ -187,7 +189,26 @@
                 if (this.readyState === 4) {
                     var response = preparedResponse(this, config)
                     observer.onCompleted({type: 'completed', response: response});
-                    ( this.status >= 200 && this.status < 300 || this.status === 304 )&&ajaxConverter(config, response);
+                    if( this.status >= 200 && this.status < 300 ){
+                        ajaxConverter(config, response);
+                        if(!noCache.test(response.responseHeaders["cache-control"])){
+                            var hash = m.hashCode(m.hashCode(config.url)+config.data);
+                            var cacheItem = ajaxCache[hash] = {
+                                lastModified : response.responseHeaders["last-modified"],
+                                etag: response.responseHeaders["etag"],
+                                expires:response.responseHeaders["expires"],
+                                data: response.responseData
+                            };
+                            if(cacheItem.expires){
+                                setTimeout(function(){
+                                    ajaxCache[hash] = undefined;
+                                },new Date(cacheItem.expires) - m.now());
+                            }
+                        }
+                    }else if(this.status === 304 ){
+                        var hash = m.hashCode(m.hashCode(config.url)+config.data);
+                        response.responseData = ajaxCache[hash].data;
+                    }
                     if (response.isSucceed) {
                         observer.onSucceed(response.responseData);
                     } else {
