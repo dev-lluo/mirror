@@ -15,9 +15,9 @@
         },
         methodAccessor;
     if (m.isIE8) {
-        m.inject(m).before("each", function () {
+        m.inject(m).before("each", function (jp) {
             if (jp.args[0] && jp.args[0].isVBClass) {
-                jp.args[0].each(jp.args[1] || function () {
+                jp.args[0].forEach(jp.args[1] || function () {
                     }, jp.args[2] || function () {});
                 jp.resume = false;
             }
@@ -103,7 +103,7 @@
             });
             buffer.push(
                 "\tPublic Property Get isVBClass",
-                "\t\tSet isVBClass = true",
+                "\t\tisVBClass = true",
                 "\tEnd Property",
                 "\tPublic Function serialize ()",
                 "\t\tserialize = mirror.stringify(inst)",
@@ -111,8 +111,8 @@
                 "\tPublic Function hashCode ()",
                 "\t\thashCode = mirror.hashCode(inst)",
                 "\tEnd Function",
-                "\tPublic Function each(func,filter)",
-                "\t\tmirror.each(inst,func,filter)",
+                "\tPublic Function forEach(func,filter)",
+                "\t\tmirror[\"each\"](inst,func,filter)",
                 "\tEnd Function",
                 "End Class"
             );

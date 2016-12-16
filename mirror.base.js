@@ -268,7 +268,7 @@
                 m.each(obj,function(key,value){
                     buffer.push(key+":"+m.stringify(value,deep-1));
                 },function(key){
-                    return key!=="__hash__";
+                    return key!=="hash____";
                 });
                 return "{"+buffer.join(",")+"}";
             }else if(m.isOne(obj,"Date")){
@@ -311,7 +311,7 @@
     m.extend({
         hashCode: function(obj){
             if(m.isOne(obj,"Object")||m.isOne(obj,"Array")){
-                return obj.__hash__||(obj.__hash__=hashCode(m.stringify(obj)+hashCode(new Date())))
+                return obj.hash____||(obj.hash____=hashCode(m.stringify(obj)+hashCode(new Date())))
             }else{
                 var objStr = m.stringify(obj);
                 return HashCache[objStr]||(HashCache[objStr]=hashCode(objStr));
