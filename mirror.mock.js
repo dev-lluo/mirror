@@ -297,16 +297,26 @@
             }).flush();
             return obj;
         };
-    m.extend({
-        mock: function (obj) {
-            var hash = mirror.hashCode(obj);
-            return rawCache[hash] || (rawCache[hash] = mock(obj, hash))
-        }
-    });
     var watch = function(hook,type,cut,func){
         hook[type][cut].push(func);
     };
-    m.extend({
+    var unwatch = function(hook,type,cut,func){
+        var removeIndex;
+        m.each(hook[type][cut],function(index,cpFunc){
+            if(m.equals(func,cpFunc)){
+                removeIndex = index;
+                return false;
+            }
+        })
+        if(removeIndex!==undefined){
+            hook[type][cut].splice(removeIndex,1);
+        }
+    };
+    return m.extend({},{
+        mock: function (obj) {
+            var hash = mirror.hashCode(obj);
+            return rawCache[hash] || (rawCache[hash] = mock(obj, hash))
+        },
         watch: function (obj, type,cut, func, prop) {
             var hash = m.hashCode(obj);
             m.assertTrue(hash in rawCache,"object must be a MockObject");
@@ -322,21 +332,7 @@
             }else {
                 watch(hook,type,cut,func);
             }
-        }
-    });
-    var unwatch = function(hook,type,cut,func){
-        var removeIndex;
-        m.each(hook[type][cut],function(index,cpFunc){
-            if(m.equals(func,cpFunc)){
-                removeIndex = index;
-                return false;
-            }
-        })
-        if(removeIndex!==undefined){
-            hook[type][cut].splice(removeIndex,1);
-        }
-    };
-    m.extend({
+        },
         unwatch: function (obj,type, cut, func, prop) {
             var hash = m.hashCode(obj);
             m.assertTrue(hash in rawCache,"object must be a MockObject");
@@ -353,6 +349,6 @@
                 unwatch(hook,type,cut,func);
             }
         }
-    })
+    });
 
 })(mirror);
