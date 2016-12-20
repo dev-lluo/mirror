@@ -289,14 +289,14 @@
         eval: (function (eval) {
             return function (data) {
                 if (m.isOne(data, "String")) {
-                    return eval(data)
+                    return eval(data);
                 } else if (m.isOne(data, "Function")) {
                     return (data)();
                 } else {
                     return data;
                 }
-            }
-        })(w.execScript || w.eval)
+            };
+        })(w.eval)
     })
     var HashCache = {}, hashCode = function (objStr) {
         var seed = 5381, i = objStr.length - 1;
@@ -797,14 +797,19 @@
         }
     });
     var env = {
-        path: "/mirror/"
+        path: "",
+        cache: {}
     };
     m.extend({
         using: function (qname) {
-            var lib,url = [env.path,qname,'.js'].join('');
-            m.ajax({url:url,async:false,succeed:function(q){
-                lib = q;
-            }});
+            var lib = env.cache[qname],url = [env.path,qname,'.js'].join('');
+            if(!lib){
+                m.ajax({url:url,async:false,succeed:function(q){
+                    lib = q;
+                },failed:function(r){
+                    console.log(r);
+                }});
+            }
             return lib;
         }
     });
