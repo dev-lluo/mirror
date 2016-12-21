@@ -234,7 +234,7 @@
                 return !!filter && (value ? filter.call(value, indexing, value) : filter(indexing, value)) === false;
             };
             return function (data, func, filter) {
-                if (m.isOne(data, "Array")) {
+                if (m.isOne(data, "Array")||"length" in data) {
                     for (var i = 0; i < data.length; i++) {
                         if (doFilter(i, data[i], filter))continue;
                         if (access(i, data[i], func))break;
@@ -520,6 +520,130 @@
         }
     });
 
+    var PromiseHooks = function () {};
+    PromiseHooks.prototype = [];
+    m.extend(PromiseHooks.prototype,{
+        freeze: function (p) {
+            this.p = p;
+            m.inject(this).after('push',function(jp){
+                this.call();
+            });
+            return this;
+        },
+        call: function () {
+            while(this.length) {
+                (this.shift())(this.p);
+            }
+        }
+    });
+    m.extend({
+        deferred: function () {
+            var d = {
+                status:-1,
+                validate: function (code) {
+                    this.status++;
+                    if(this.status>code) throw 'status error';
+                },
+                start: function (c) {
+                    this.validate(0)
+                    this.hookGroup____.startHooks.freeze(c).call();
+                },
+                complete: function (v) {
+                    this.validate(1);
+                    this.hookGroup____.completeHooks.freeze(v).call();
+                },
+                success: function (v) {
+                    this.validate(1);
+                    this.hookGroup____.successHooks.freeze(v).call();
+                },
+                fail: function (e) {
+                    this.validate(1);
+                    this.hookGroup____.failHooks.freeze(e).call();
+                },
+                cancel: function (e) {
+                    this.validate(0);
+                    this.hookGroup____.cancelHooks.freeze(e).call();
+                },
+                hookGroup____: {
+                    startHooks: new PromiseHooks(),
+                    completeHooks: new PromiseHooks(),
+                    successHooks: new PromiseHooks(),
+                    failHooks: new PromiseHooks(),
+                    cancelHooks: new PromiseHooks()
+                }
+            };
+            return m.extend(d,{
+                promise____: {
+                    start: function (func) {
+                        d.hookGroup____.startHooks.push(func);
+                        return this;
+                    },
+                    complete: function (func) {
+                        d.hookGroup____.completeHooks.push(func);
+                        return this;
+                    },
+                    success: function (func) {
+                        d.hookGroup____.successHooks.push(func);
+                        return this;
+                    },
+                    fail: function (func) {
+                        d.hookGroup____.failHooks.push(func);
+                        return this;
+                    },
+                    cancel: function (func) {
+                        d.hookGroup____.cancelHooks.push(func);
+                        return this;
+                    }
+                },
+                promise: function () {
+                    return this.promise____;
+                }
+            });
+        }
+    });
+    m.extend({
+        promises: function () {
+            var megre = {
+                length: arguments.length,
+                s0____: 0,
+                start: function (i,c) {
+                    this.s0____++;
+                    this.defferred.start();
+                },
+                s1____: 0,
+                complete: function (i,v) {
+                    this.s1____++;
+                    this.defferred.complete();
+                },
+                s2____: 0,
+                success: function (i,v) {
+                    this.s2____++;
+                    this.defferred.success();
+                },
+                fail: function (i,e) {
+                    this.defferred.fail();
+                },
+                cancel: function (i,e) {
+                    this.defferred.cancel();
+                },
+                defferred: $.deferred()
+            };
+            m.each(arguments,function (i, promise) {
+                promise.start(function (c) {
+                    megre.start(i,c);
+                }).complete(function(v){
+                    megre.complete(i,v);
+                }).success(function (v) {
+                    megre.success(i,v);
+                }).fail(function (e) {
+                    megre.fail(i,e);
+                }).cancel(function (e) {
+                    megre.cancel(i,e);
+                })
+            });
+        }
+    });
+
     var ajaxCache = {},
         noCache = /^no-(cache|store)$/ig;
     //from jquery
@@ -666,46 +790,22 @@
             }
             response.isSucceed = true;
         };
-    var AjaxObserver = function (preparedHooks, startedHooks, completedHooks, succeedHooks, failedHooks) {
-        this.preparedHooks = m.isOne(preparedHooks,"Array")? preparedHooks : [preparedHooks] ;
-        this.startedHooks = m.isOne(startedHooks,"Array")? startedHooks : [startedHooks] ;
-        this.completedHooks = m.isOne(completedHooks,"Array")? completedHooks : [completedHooks]  ;
-        this.successedHooks = m.isOne(succeedHooks,"Array")? succeedHooks : [succeedHooks] ;
-        this.failedHooks = m.isOne(failedHooks,"Array")? failedHooks : [failedHooks] ;
-    };
-    AjaxObserver.prototype.onPrepared = function (event) {
-        hooksExecutor(this.preparedHooks, event);
-    };
-    AjaxObserver.prototype.onStarted = function (event) {
-        hooksExecutor(this.startedHooks, event);
-    };
-    AjaxObserver.prototype.onCompleted = function (event) {
-        hooksExecutor(this.completedHooks, event);
-    };
-    AjaxObserver.prototype.onSucceed = function (event) {
-        hooksExecutor(this.successedHooks, event);
-    };
-    AjaxObserver.prototype.onFailed = function (event) {
-        hooksExecutor(this.failedHooks, event);
-    };
     var AjaxTask = function (config) {
         config.dataTypes = m.trim(config.dataType || "*").toLowerCase().split(core_rspace);
         this.config = config;
         this.xhr = this.config.xhr();
     };
-    AjaxTask.prototype.adapted = function (observer) {
+    AjaxTask.prototype.adapted = function (deferred) {
         if (this.config.async) {
             this.xhr.timeout = this.config.timeout;
             m.inject(this).before("start", function (jp) {
-                observer.onPrepared({config: this.config, type: 'prepared'});
-            }).after("start", function (jp) {
-                observer.onStarted({config: this.config, type: 'started'});
+                deferred.start({config: this.config, type: 'prepared'});
             }).flush();
             var config = this.config;
             this.xhr.onreadystatechange = function (e) {
                 if (this.readyState === 4) {
                     var response = preparedResponse(this, config)
-                    observer.onCompleted({type: 'completed', response: response});
+                    deferred.complete({type: 'completed', response: response});
                     if (this.status >= 200 && this.status < 300) {
                         ajaxConverter(config, response);
                         if (!noCache.test(response.responseHeaders["cache-control"])) {
@@ -727,37 +827,34 @@
                         response.responseData = ajaxCache[hash].data;
                     }
                     if (response.isSucceed) {
-                        observer.onSucceed(response.responseData);
+                        deferred.success(response.responseData);
                     } else {
-                        observer.onFailed(response);
+                        deferred.fail(response);
                     }
                 }
             };
             this.xhr.ontimeout = function (e) {
-                observer.onFailed({type: 'timeout', time: config.timeout});
+                deferred.fail({e: 'timeout', time: config.timeout});
             }
         } else {
             m.inject(this).before("start", function (jp) {
-                observer.onPrepared({config: this.config, type: 'prepared'});
-            }).after("start", function (jp) {
-                observer.onStarted({config: this.config, type: 'started'});
+                deferred.start({config: this.config, type: 'prepared'});
             }).after("send", function (jp) {
                 if (this.xhr.readyState === 4) {
                     var response = preparedResponse(this.xhr, this.config)
-                    observer.onCompleted({type: 'completed', response: response});
+                    deferred.complete({type: 'completed', response: response});
                     ( this.xhr.status >= 200 && this.xhr.status < 300 || this.xhr.status === 304 ) && ajaxConverter(this.config, response);
                     if (response.isSucceed) {
-                        observer.onSucceed(response.responseData);
+                        deferred.success(response.responseData);
                     } else {
-                        observer.onFailed(response);
+                        deferred.fail(response);
                     }
-
                 }
             }).flush();
         }
         return this;
     };
-    AjaxTask.prototype.start = function () {
+    AjaxTask.prototype.send = function () {
         if (this.config.username) {
             this.xhr.open(this.config.method, this.config.url, this.config.async, this.config.username, this.config.password);
         } else {
@@ -768,9 +865,6 @@
                 this.config.accepts[this.config.dataType]
                 : this.config.accepts["*"]
         );
-        return this;
-    };
-    AjaxTask.prototype.send = function () {
         this.xhr.send();
     };
     var megreConfig = function (cfg) {
@@ -785,15 +879,22 @@
         },
         ajax: function (cfg) {
             var config = megreConfig(cfg);
-            new AjaxTask(config).adapted(new AjaxObserver(config.prepared, config.started, config.completed, config.succeed, config.failed)).start().send();
+            var deferred = m.deferred();
+            var ajax = new AjaxTask(config).adapted(deferred);
+            return m.extend(deferred.promise(),{
+                send : function () {
+                    ajax.send();
+                    return this;
+                }
+            });
         },
         getXML: function (cfg) {
             cfg.dataType = "xml";
-            m.ajax(cfg);
+            return m.ajax(cfg);
         },
         getJSON: function (cfg) {
             cfg.dataType = "json";
-            m.ajax(cfg);
+            return m.ajax(cfg);
         }
     });
     var env = {
@@ -802,15 +903,16 @@
     };
     m.extend({
         using: function (qname) {
-            var lib = env.cache[qname],url = [env.path,qname,'.js'].join('');
-            if(!lib){
-                m.ajax({url:url,async:false,succeed:function(q){
-                    lib = q;
-                },failed:function(r){
-                    console.log(r);
-                }});
+            var lib = env.cache[qname]||(env.cache[qname] = {})
+                ,url = [env.path,qname,'.js'].join('');
+            if(!lib.ajax){
+                lib.ajax = m.ajax({url:url});
+                lib.ajax.fail(function (e) {
+                    lib.ajax = undefined;
+                    m.log(e);
+                }).send();
             }
-            return lib;
+            return lib.ajax;
         }
     });
     window.mirror = m;
