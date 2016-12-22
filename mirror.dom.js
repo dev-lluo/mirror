@@ -8,43 +8,33 @@
         }
         ,attrHook = {
         }
-        ,attrPolyfill = {
-            text : 	{
-                get : getText,
-                set : setText
-            },
-            value : {
-                get : getVal,
-                set : setVal
-            }
-        }
         ,isEmptyExp = (function(exp){
             m.inject(exp).after("test",function () {
                 this.restore();
             }).flush();
             return exp;
         })(/^\s*$/g);;
-    var Query = function (selector,context) {
+    var Dom = function (selector,context) {
         if(m.isOne(selector,"String")){
             sizzle(selector,context,this);
         }else if(m.isOne(selector,"Array")){
             this.push(selector);
         }
     };
-    Query.on = function (dom, type, func, useCapture) {
+    Dom.on = function (dom, type, func, useCapture) {
         dom.addEventListener(eventHook[type]||type,func,useCapture||false);
     };
-    Query.off = function(dom,type,func,useCapture){
+    Dom.off = function(dom,type,func,useCapture){
         dom.removeEventListener(eventHook[type]||type, func,useCapture||false);
     };
-    Query.getText = function(dom){
+    Dom.getText = function(dom){
         var results = [];
         m.each(dom.childNodes,function(){
             results.push(this.nodeValue);
         },function(){return this.nodeType===3&&!isEmptyExp.test(this.nodeValue)});
         return results.join('');
     };
-    Query.setText = function(dom,text){
+    Dom.setText = function(dom,text){
         var did = false;
         m.each(dom.childNodes,function(){
             if(did){
@@ -55,136 +45,146 @@
             }
         },function(){return this.nodeType===3&&!isEmptyExp.test(this.nodeValue)});
     };
-    Query.setValue = function(dom,val){
+    Dom.setValue = function(dom,val){
         dom.value = val;
     };
-    Query.getValue = function(dom){
+    Dom.getValue = function(dom){
         return dom.value;
     };
-    Query.removeAttr = function(dom,attr){
+    Dom.removeAttr = function(dom,attr){
         return dom.removeAttribute(attrHook[attr]||attr);
     };
-    Query.getAttr = function(dom,attr){
+    Dom.getAttr = function(dom,attr){
         return dom.getAttribute(attrHook[attr]||attr);
     };
-    Query.setAttr = function(dom,attr,val){
-        if(val!==Query.getAttr(dom,attr)){
+    Dom.setAttr = function(dom,attr,val){
+        if(val!==Dom.getAttr(dom,attr)){
             dom.setAttribute(attrHook[attr]||attr,val);
         }
     };
-    Query.getChild = function(dom,hasText){
+    Dom.getChild = function(dom,hasText){
         var child = [];
         m.each(dom.childNodes,function(){
             child.push(this);
         },function(){return this.nodeType===1||(hasText&&this.nodeType===3);});
         return child;
     };
-    Query.getParent  = function(dom){
+    Dom.getParent  = function(dom){
         return dom.parentNode;
     };
-    Query.append = function(parent,child){
+    Dom.append = function(parent,child){
         parent.appendChild(child);
     };
-    Query.remove = function(child){
+    Dom.remove = function(child){
         child.parentNode.removeChild(child);
     };
-    Query.replace = function(oldDom,newDom){
+    Dom.replace = function(oldDom,newDom){
         oldDom.parentNode.replaceChild(newDom,oldDom);
     };
-    Query.cloneNode = function(dom,dp){
+    Dom.cloneNode = function(dom,dp){
         return dom.cloneNode(dp);
     };
-    Query.valueOf = function (str) {
-        var query = new Query(m.parseHTML(str));
-        return query;
+    Dom.valueOf = function (str) {
+        var Dom = new Dom(m.parseHTML(str));
+        return Dom;
     };
-    Query.prototype = [];
-    Query.prototype.each = function (func) {
+    Dom.prototype = [];
+    Dom.prototype.each = function (func) {
         m.each(this,func);
         return this;
     };
-    Query.prototype.on = function (type,func,useCapture) {
+    Dom.prototype.on = function (type,func,useCapture) {
         return this.each(function () {
-            Query.on(this,type,func,useCapture);
+            Dom.on(this,type,func,useCapture);
         })
     };
-    Query.prototype.off = function (type, func, useCapture) {
+    Dom.prototype.off = function (type, func, useCapture) {
         return this.each(function(){
-           Query.off(this,func,useCapture);
+           Dom.off(this,func,useCapture);
         });
     };
-    Query.prototype.text = function(text){
+    Dom.prototype.text = function(text){
         if(arguments.length===1){
             return this.each(function(){
-                Query.setText(this,text);
+                Dom.setText(this,text);
             });
         }else{
             var text = [];
             this.each(function(){
-                text.push(Query.getText(this));
+                text.push(Dom.getText(this));
             });
             return text.join(",");
         }
     };
-    Query.prototype.val = function(val){
+    Dom.prototype.val = function(val){
         if(arguments.length===1){
             return this.each(function(){
-                Query.setValue(this,val);
+                Dom.setValue(this,val);
             });
         }else{
             var val = [];
             this.each(function(){
-                val.push(Query.getValue(this));
+                val.push(Dom.getValue(this));
             });
             return val.join(",");
         }
     };
-    Query.prototype.attr = function(attr,val){
+    var attrPolyfill = {
+        text : 	{
+            get : Dom.getText,
+            set : Dom.setText
+        },
+        value : {
+            get : Dom.getValue,
+            set : Dom.setValue
+        }
+    };
+    Dom.prototype.attr = function(attr,val){
         if(arguments.length===2){
             return this.each(function(){
-                attrPolyfill[attr]?attrPolyfill[attr].set(this,val):Query.setAttr(this,attr,val);
+                attrPolyfill[attr]?attrPolyfill[attr].set(this,val):Dom.setAttr(this,attr,val);
             });
         }else{
             var attrVal = [];
             this.each(function(){
-                attrVal.push(attrPolyfill[attr]?attrPolyfill[attr].get(this):Query.getAttr(this,attr));
+                attrVal.push(attrPolyfill[attr]?attrPolyfill[attr].get(this):Dom.getAttr(this,attr));
             });
             return attrVal.join(",");
         }
     };
-    Query.prototype.child = function(){
-        var child = new Query();
+    Dom.prototype.child = function(){
+        var child = new Dom();
         this.each(function(){
-            child.push(Query.getChild(this));
+            child.push(Dom.getChild(this));
         });
         return child;
     };
-    Query.prototype.parent = function(){
-        var parent = new Query();
+    Dom.prototype.parent = function(){
+        var parent = new Dom();
         this.each(function(){
-            parent.push(Query.getParent(this));
+            parent.push(Dom.getParent(this));
         });
         return parent;
     };
-    Query.prototype.append = function(dom){
+    Dom.prototype.append = function(dom){
         return this.each(function(){
-            Query.append(this,dom);
+            Dom.append(this,dom);
         });
     };
-    Query.prototype.remove = function(){
+    Dom.prototype.remove = function(){
         return this.each(function(){
-            Query.remove(this);
+            Dom.remove(this);
         });
     };
-    Query.prototype.replace = function(dom){
+    Dom.prototype.replace = function(dom){
         return this.each(function(){
-            Query.replace(this,dom);
+            Dom.replace(this,dom);
         });
     };
-    Query.prototype.clone = function(dp){
-        var clone = new Query();
+    Dom.prototype.clone = function(dp){
+        var clone = new Dom();
         this.each(function(){
-            clone.push(Query.cloneNode(this,dp));
+            clone.push(Dom.cloneNode(this,dp));
         });
         return clone;
     };
@@ -192,7 +192,7 @@
         m.extend(eventHook,{
             input: "propertychange"
         });
-        m.extend(Query,{
+        m.extend(Dom,{
             on: function(dom,type,func){
                 var callback = function(o,h){
                     return function(){
@@ -224,5 +224,5 @@
             })(/^(SCRIPT)$/ig)
         });
     }
-    return Query;
+    return Dom;
 })(mirror);
