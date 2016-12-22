@@ -5,43 +5,40 @@
     <title>mirro</title>
     <script src="mirror.base.js"></script>
     <script>
-        mirror.using("mirror.sizzle","mirror.mock").success(function (s, m) {
-            mirror.log(s('body'));
-            mirror.log(m);
+        var sizzle = mirror.using("mirror.sizzle");
+        mirror.log(sizzle);
+        var mocker = mirror.using("mirror.mock");
+        var mockObject = mocker.mock({name:"x",age:23,friends:["lz","xh","zy"]});
+        mocker.watch(mockObject,"set","before",function (event) {
+            if(event.value!="xhh") return false;
+        },"name");
+        mocker.watch(mockObject,"set","before",function (event) {
+            console.log(event);
         });
-        mirror.using("mirror.mock").success(function(helper){
-            var mockObject = helper.mock({name:"x",age:23,friends:["lz","xh","zy"]});
-            helper.watch(mockObject,"set","before",function (event) {
-                if(event.value!="xhh") return false;
-            },"name");
-            helper.watch(mockObject,"set","before",function (event) {
-                console.log(event);
-            });
-            helper.watch(mockObject,"get","before",function (event) {
-                console.log(event);
-            });
-            helper.watch(mockObject,"set","before",function (event) {
-                mirror.assertTrue(mirror.isOne(event.value,"Number"));
-            },"age");
-            helper.unwatch(mockObject,"set","before",function (event) {
-                if(event.value!="xhh") return false;
-            },"name");
-            var mockArray = helper.mock(mockObject.friends);
-            helper.watch(mockArray,"add","before",function(event){
-                console.log(event);
-            });
-            helper.watch(mockArray,"del","before",function(event){
-                console.log(event);
-            });
-            helper.watch(mockArray,"set","before",function(event){
-                if(event.oldValue==="lz")return false;
-            });
-            helper.watch(mockArray,"get","before",function(event){
-                console.log(event);
-            });
-            helper.watch(mockArray,"srt","before",function(event){
-                console.log(event);
-            });
+        mocker.watch(mockObject,"get","before",function (event) {
+            console.log(event);
+        });
+        mocker.watch(mockObject,"set","before",function (event) {
+            mirror.assertTrue(mirror.isOne(event.value,"Number"));
+        },"age");
+        mocker.unwatch(mockObject,"set","before",function (event) {
+            if(event.value!="xhh") return false;
+        },"name");
+        var mockArray = mocker.mock(mockObject.friends);
+        mocker.watch(mockArray,"add","before",function(event){
+            console.log(event);
+        });
+        mocker.watch(mockArray,"del","before",function(event){
+            console.log(event);
+        });
+        mocker.watch(mockArray,"set","before",function(event){
+            if(event.oldValue==="lz")return false;
+        });
+        mocker.watch(mockArray,"get","before",function(event){
+            console.log(event);
+        });
+        mocker.watch(mockArray,"srt","before",function(event){
+            console.log(event);
         });
     </script>
 </head>

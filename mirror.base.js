@@ -649,6 +649,10 @@
                     mw.cancel(i,e);
                 })
             });
+            if(!mw.expected){
+                mw.start();
+                mw.success();
+            }
             return deferred.promise();
         }
     });
@@ -906,21 +910,17 @@
         cache: {}
     };
     m.extend({
-        using: function () {
-            var qname,i=0,promises=[];
-            for(;qname=arguments[i++];){
-                var lib = env.cache[qname]||(env.cache[qname] = {})
-                    ,url = [env.path,qname,'.js'].join('');
-                if(!lib.promise){
-                    lib.promise = m.ajax({url:url});
-                    lib.promise.fail(function (e) {
-                        lib.promise = undefined;
-                        m.log(e);
-                    });
-                }
-                promises.push(lib.promise);
+        using: function (qname) {
+            var lib = env.cache[qname]||(env.cache[qname] = {core:noop})
+                ,url = [env.path,qname,'.js'].join('');
+            if(lib.core===noop){
+                m.ajax({url:url,async:false}).success(function (v) {
+                    lib.core = v;
+                }).fail(function (e) {
+                    lib.e = e;
+                });
             }
-            return m.promises.apply(m,promises);
+            return lib.core;
         }
     });
     window.mirror = m;
