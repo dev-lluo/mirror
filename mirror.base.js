@@ -523,8 +523,9 @@
     var PromiseHooks = function () {};
     PromiseHooks.prototype = [];
     m.extend(PromiseHooks.prototype,{
-        freeze: function (p) {
+        freeze: function (p,mul) {
             this.p = p;
+            this.m = mul;
             m.inject(this).after('push',function(jp){
                 this.call();
             });
@@ -532,7 +533,8 @@
         },
         call: function () {
             while(this.length) {
-                (this.shift())(this.p);
+                var func = this.shift();
+                this.m?func.apply(window,this.p):func.call(window,this.p);
             }
         }
     });
@@ -544,23 +546,23 @@
                     this.status++;
                     if(this.status>code) throw 'status error';
                 },
-                start: function (c) {
+                start: function (c,m) {
                     this.validate(0)
-                    this.hookGroup____.startHooks.freeze(c).call();
+                    this.hookGroup____.startHooks.freeze(c,m).call();
                 },
-                complete: function (v) {
+                complete: function (v,m) {
                     this.validate(1);
-                    this.hookGroup____.completeHooks.freeze(v).call();
+                    this.hookGroup____.completeHooks.freeze(v,m).call();
                 },
-                success: function (v) {
+                success: function (v,m) {
                     this.validate(1);
-                    this.hookGroup____.successHooks.freeze(v).call();
+                    this.hookGroup____.successHooks.freeze(v,m).call();
                 },
                 fail: function (e) {
                     this.validate(1);
                     this.hookGroup____.failHooks.freeze(e).call();
                 },
-                cancel: function (e) {
+                cancel: function (e,m) {
                     this.validate(0);
                     this.hookGroup____.cancelHooks.freeze(e).call();
                 },
@@ -603,44 +605,51 @@
     });
     m.extend({
         promises: function () {
-            var megre = {
-                length: arguments.length,
+            var deferred = m.deferred();
+            var mw = {
+                expected: arguments.length,
                 s0____: 0,
+                a0____: [],
                 start: function (i,c) {
                     this.s0____++;
-                    this.defferred.start();
+                    this.a0____[i] = c;
+                    this.expected===this.s0____&&deferred.start(this.a0____,true);
                 },
                 s1____: 0,
+                a1____: [],
                 complete: function (i,v) {
                     this.s1____++;
-                    this.defferred.complete();
+                    this.a1____[i] = v;
+                    this.expected===this.s1____&&deferred.complete(this.a1____,true);
                 },
                 s2____: 0,
+                a2____: [],
                 success: function (i,v) {
                     this.s2____++;
-                    this.defferred.success();
+                    this.a2____[i] = v;
+                    this.expected===this.s2____&&deferred.success(this.a2____,true);
                 },
                 fail: function (i,e) {
-                    this.defferred.fail();
+                    deferred.fail(e);
                 },
                 cancel: function (i,e) {
-                    this.defferred.cancel();
-                },
-                defferred: $.deferred()
+                    deferred.cancel(e);
+                }
             };
             m.each(arguments,function (i, promise) {
                 promise.start(function (c) {
-                    megre.start(i,c);
+                    mw.start(i,c);
                 }).complete(function(v){
-                    megre.complete(i,v);
+                    mw.complete(i,v);
                 }).success(function (v) {
-                    megre.success(i,v);
+                    mw.success(i,v);
                 }).fail(function (e) {
-                    megre.fail(i,e);
+                    mw.fail(i,e);
                 }).cancel(function (e) {
-                    megre.cancel(i,e);
+                    mw.cancel(i,e);
                 })
             });
+            return deferred.promise();
         }
     });
 

@@ -5,9 +5,10 @@
     <title>mirro</title>
     <script src="mirror.base.js"></script>
     <script>
-        mirror.ajax({url:"index.html"}).success(function (v) {
-            m.log(v);
-        })
+        mirror.promises(mirror.using("mirror.sizzle"),mirror.using("mirror.mock")).success(function(s,m){
+            mirror.log(s('body'));
+            mirror.log(m);
+        });
         mirror.using("mirror.mock").success(function(helper){
             var mockObject = helper.mock({name:"x",age:23,friends:["lz","xh","zy"]});
             helper.watch(mockObject,"set","before",function (event) {
