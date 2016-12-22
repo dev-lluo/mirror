@@ -5,7 +5,7 @@
     <title>mirro</title>
     <script src="mirror.base.js"></script>
     <script>
-        mirror.promises(mirror.using("mirror.sizzle"),mirror.using("mirror.mock")).success(function(s,m){
+        mirror.using("mirror.sizzle","mirror.mock").success(function (s, m) {
             mirror.log(s('body'));
             mirror.log(m);
         });

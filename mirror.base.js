@@ -889,13 +889,8 @@
         ajax: function (cfg) {
             var config = megreConfig(cfg);
             var deferred = m.deferred();
-            var ajax = new AjaxTask(config).adapted(deferred);
-            return m.extend(deferred.promise(),{
-                send : function () {
-                    ajax.send();
-                    return this;
-                }
-            });
+            var ajax = new AjaxTask(config).adapted(deferred).send();
+            return deferred.promise();
         },
         getXML: function (cfg) {
             cfg.dataType = "xml";
@@ -911,17 +906,21 @@
         cache: {}
     };
     m.extend({
-        using: function (qname) {
-            var lib = env.cache[qname]||(env.cache[qname] = {})
-                ,url = [env.path,qname,'.js'].join('');
-            if(!lib.ajax){
-                lib.ajax = m.ajax({url:url});
-                lib.ajax.fail(function (e) {
-                    lib.ajax = undefined;
-                    m.log(e);
-                }).send();
+        using: function () {
+            var qname,i=0,promises=[];
+            for(;qname=arguments[i++];){
+                var lib = env.cache[qname]||(env.cache[qname] = {})
+                    ,url = [env.path,qname,'.js'].join('');
+                if(!lib.promise){
+                    lib.promise = m.ajax({url:url});
+                    lib.promise.fail(function (e) {
+                        lib.promise = undefined;
+                        m.log(e);
+                    });
+                }
+                promises.push(lib.promise);
             }
-            return lib.ajax;
+            return m.promises.apply(m,promises);
         }
     });
     window.mirror = m;
