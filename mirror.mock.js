@@ -1,11 +1,11 @@
 (function (m) {
-    var __MockObject__ = function (instance, accessors, fieldAccessor, methodAccessor) {
+    function __MockObject__(instance, accessors, fieldAccessor, methodAccessor) {
             this.__inst__ = instance;
             this.__accs__ = accessors;
             this.__facc__ = fieldAccessor;
             this.__macc__ = methodAccessor;
-        },
-        def = Object.defineProperties,
+        }
+    var def = Object.defineProperties,
         fieldAccessor = function (instance, accessors, name, value) {
             if (arguments.length === 4) {
                 accessors[name].set.call(instance, value);

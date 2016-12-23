@@ -289,7 +289,7 @@
         eval: (function (eval) {
             return function (data) {
                 if (m.isOne(data, "String")) {
-                    return eval(data);
+                    return eval.call(w,data);
                 } else if (m.isOne(data, "Function")) {
                     return (data)();
                 } else {
@@ -385,7 +385,10 @@
                 m.each(scripts, function (i, value) {
                     value && value.type && rscriptType.test(value.type) && value.parentNode && value.parentNode.removeChild(value);
                 });
-                elem = div.childNodes;
+                elem = [];
+                m.each(div.childNodes,function () {
+                    elem.push(this)
+                });
             } else {
                 elem = [document.createTextNode(elem)];
             }
@@ -442,7 +445,7 @@
         }
     });
 
-    var __Inject__ = function (obj) {
+    function __Inject__(obj) {
         this.__obj__ = obj;
     };
     m.extend(__Inject__.prototype, {
@@ -520,7 +523,7 @@
         }
     });
 
-    var PromiseHooks = function () {};
+    function PromiseHooks() {};
     PromiseHooks.prototype = [];
     m.extend(PromiseHooks.prototype,{
         freeze: function (p,mul) {
@@ -803,7 +806,7 @@
             }
             response.isSucceed = true;
         };
-    var AjaxTask = function (config) {
+    function AjaxTask(config) {
         config.dataTypes = m.trim(config.dataType || "*").toLowerCase().split(core_rspace);
         this.config = config;
         this.xhr = this.config.xhr();

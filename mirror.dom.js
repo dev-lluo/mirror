@@ -14,11 +14,11 @@
             }).flush();
             return exp;
         })(/^\s*$/g);;
-    var Dom = function (selector,context) {
+    function Dom(selector,context) {
         if(m.isOne(selector,"String")){
             sizzle(selector,context,this);
         }else if(m.isOne(selector,"Array")){
-            this.push(selector);
+            this.push.apply(this,selector);
         }
     };
     Dom.on = function (dom, type, func, useCapture) {
@@ -85,8 +85,8 @@
         return dom.cloneNode(dp);
     };
     Dom.valueOf = function (str) {
-        var Dom = new Dom(m.parseHTML(str));
-        return Dom;
+        var dom = new Dom(m.parseHTML(str));
+        return dom;
     };
     Dom.prototype = [];
     Dom.prototype.each = function (func) {
@@ -224,5 +224,9 @@
             })(/^(SCRIPT)$/ig)
         });
     }
-    return Dom;
+    return m.extend({
+        dom: function (selector,context) {
+            return new Dom(selector,context);
+        }
+    },Dom);
 })(mirror);

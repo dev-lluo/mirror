@@ -6,7 +6,16 @@
     <script src="mirror.base.js"></script>
 </head>
 <body>
-
+    <script type="text/template" id="ul">
+        <ul>
+            <li></li>
+        </ul>
+    </script>
+    <script type="text/template" id="ol">
+        <ol>
+            <li></li>
+        </ol>
+    </script>
 </body>
 <script>
     var sizzle = mirror.using("mirror.sizzle");
@@ -44,7 +53,9 @@
     mocker.watch(mockArray,"srt","before",function(event){
         console.log(event);
     });
-    var Dom = mirror.using("mirror.dom");
-    mirror.log(new Dom("body"));
+    var d = mirror.using("mirror.dom");
+    mirror.log(d.dom("body"));
+    var t = mirror.using("mirror.template");
+    t.ul.renderTo("body ")
 </script>
 </html>
