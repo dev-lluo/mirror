@@ -7,8 +7,9 @@
             return String(data).toLowerCase();
         };
 
-    function Token(type,parent){
+    function Token(type,cursor,parent){
         this.type = type;
+        this.cursor = cursor;
         this.parent = parent;
     }
     Token.prototype = [];
@@ -24,7 +25,7 @@
         m.assertDefined(text);
         this.text = text;
         this.index = 0;
-        this.tokens = new Token("$root");
+        this.tokens = new Token("$root",0);
     }
 
     m.extend(Lexer.prototype, {
@@ -34,39 +35,58 @@
         },
         roll: function (i) {
             var num = i || 1;
-            return this.index = this.index + i;
+            return this.index = this.index + num;
         },
         branch: function (type) {
-            var branch = new Token(type,this.tokens);
+            var branch = new Token(type,this.index,this.tokens);
+            branch.parent.push(branch);
             return this.tokens = branch;
         },
         base: function () {
             return this.tokens = this.tokens.parent;
         },
         lex: function () {
-            var ch = this.peek();
-            while(this.index<this.text.length){
+            debugger;
+            var ch;
+            while(ch = this.peek()){
                 if(ch==='{'){
                     ch = this.peek(1);
                     if(ch==='{'){
-                        this.tokens.branch("$expr");
                         this.roll(2);
+                        this.branch("$expr");
                         continue;
                     }else{
                         throw 'error expr : '+this.text;
                     }
                 }else if(ch==='['){
-                    this.tokens.branch("$load");
                     this.roll();
+                    this.branch("$load");
                     continue;
                 }else if(ch==='('){
-                    this.tokens.branch("$push");
                     this.roll();
+                    this.branch("$push");
                     continue;
                 }else {
-
+                    if('])'.includes(ch)){
+                        this.tokens.push(this.text.substring(this.tokens.cursor,this.index));
+                        this.base();
+                        this.roll();
+                        continue;
+                    }else if('}'==ch){
+                        ch = this.peek(1);
+                        if(ch==='}'){
+                            this.tokens.push(this.text.substring(this.tokens.cursor,this.index));
+                            this.roll(2);
+                            this.base();
+                            continue;
+                        }
+                    }else{
+                        this.roll();
+                        continue;
+                    }
                 }
             }
+            return this.tokens;
         }
     });
     return {
