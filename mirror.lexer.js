@@ -58,10 +58,6 @@
                     }else{
                         throw 'error expr : '+this.text;
                     }
-                }else if(ch==='['){
-                    this.roll();
-                    this.branch("$load");
-                    continue;
                 }else if(ch==='('){
                     this.roll();
                     this.branch("$push");
@@ -81,8 +77,16 @@
                             continue;
                         }
                     }else{
-                        this.roll();
-                        continue;
+                        if(this.tokens.type!=='$load'){
+                            this.branch("$load");
+                        }
+                        if('[.'.includes(ch)){
+                            this.tokens.push(this.text.substring(this.tokens.cursor,this.index));
+                            this.roll();
+                        }else{
+                            this.roll();
+                            continue;
+                        }
                     }
                 }
             }
