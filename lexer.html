@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lexer</title>
+    <script src="mirror.base.js"></script>
+</head>
+<body>
+这里使用一个\{\{position.title\}\}作为占位符所以我的title是{{position.title}}@{{name}}-{{[age]}}
+</body>
+<script>
+    var text = document.body.innerText;
+    console.log(text);
+    var ESCAPE = {"n": "\n", "f": "\f", "r": "\r", "t": "\t", "v": "\v", "'": "'", '"': '"',"{":"{","}":"}","[":"[","]":"]"},
+        isEscapeChar = function (ch) {
+            return '\\' === ch;
+        },
+        isBraceLChar = function (ch) {
+            return '{' === ch;
+        },
+        isBraceRChar = function (ch) {
+            return '}' === ch;
+        },
+        isBracketLChar = function (ch) {
+            return '[' === ch;
+        },
+        isBracketRChar = function (ch) {
+            return ']' === ch;
+        },
+        isDotChar = function(ch){
+            return '.' === ch;
+        };
+
+    function Lexer(text) {
+        mirror.assertDefined(text);
+        this.text = text;
+        this.index = 0;
+        this.cache = [];
+        this.queue = [];
+        this.tokenGroup = new TokenGroup('$root',0);
+    }
+    Lexer.prototype.peek = function (i) {
+        i = i||0;
+        return ((i = this.index + i) < this.text.length) ? this.text.charAt(i) : false;
+    }
+    Lexer.prototype.roll = function (i) {
+        i = i || 1;
+        return this.index = this.index + i;
+    }
+    Lexer.prototype.branch = function (type) {
+        this.trySnatch();
+        this.queue.push(this.tokenGroup);
+        this.queue[this.queue.length-1].push(this.tokenGroup = new TokenGroup(type,this.index));
+    }
+    Lexer.prototype.base = function () {
+        this.trySnatch();
+        this.tokenGroup = this.queue.pop();
+        this.tokenGroup.hook = this.index;
+    }
+    Lexer.prototype.snatch = function () {
+        if(!this.cache.length)throw 'lexer error';
+        this.tokenGroup.push(this.cache.join(""));
+        this.cache.length = 0;
+    }
+    Lexer.prototype.trySnatch = function () {
+        if(this.cache.length){
+            this.snatch();
+        }
+    }
+    Lexer.prototype.lex = function () {
+        var ch,needEscape;
+        while((ch = this.peek())!==false){
+            if(needEscape){
+                needEscape = false;
+                if(ESCAPE[ch]){
+                    this.cache.push(ESCAPE[ch]);
+                }else{
+                    this.cache.push('\\',ch);
+                }
+                this.roll();
+            }else{
+                if(isEscapeChar(ch)){
+                    needEscape = true;
+                    this.roll();
+                }else if(isBraceLChar(ch)){
+                    ch = this.peek(1);
+                    if(isBraceLChar(ch)){
+                        this.branch('$expr');
+                        this.roll(2);
+                    }else{
+                        throw 'unsupported'
+                    }
+                }else if(isBraceRChar(ch)){
+                    ch = this.peek(1);
+                    if(isBraceRChar(ch)){
+                        this.base();
+                        this.roll(2);
+                    }else{
+                        throw 'unsupported'
+                    }
+                }else{
+                    if(this.tokenGroup.type==='$expr'){
+                        if(isDotChar(ch)){
+                            this.snatch();
+                        }else if(isBracketLChar(ch)){
+                            this.branch("$expr");
+                        }else if(isBracketRChar(ch)){
+                            this.base();
+                        }else{
+                            this.cache.push(ch);
+                        }
+                    }else{
+                        this.cache.push(ch);
+                    }
+                    this.roll();
+                }
+            }
+        }
+    }
+    function TokenGroup(type,hook){
+        this.type = type;
+        this.hook = hook;
+    }
+    TokenGroup.prototype = [];
+
+    var lexer = new Lexer(document.body.innerText);
+    lexer.lex();
+    console.log(lexer.tokenGroup);
+</script>
+</html>
