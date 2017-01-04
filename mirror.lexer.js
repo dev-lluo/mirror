@@ -45,8 +45,26 @@
         base: function () {
             return this.tokens = this.tokens.parent;
         },
+        snatch: function (i) {
+            if(this.tokens.state===1){
+                this.tokens.push(this.text.substring(this.tokens.cursor,this.index));
+                this.tokens.state = 2;
+            }
+            this.roll(i);
+            this.tokens.cursor = this.index;
+        },
+        trySnatch: function (i) {
+            if(this.tokens.state===1){
+                this.tokens.push(this.text.substring(this.tokens.cursor,this.index));
+                this.tokens.state = 2;
+            }
+            if(this.tokens.type==='$load'){
+                this.base();
+            }
+            this.roll(i);
+            this.tokens.cursor = this.index;
+        },
         lex: function () {
-            debugger;
             var ch;
             while(ch = this.peek()){
                 if(ch==='{'){
@@ -58,35 +76,35 @@
                     }else{
                         throw 'error expr : '+this.text;
                     }
+                }else if('}'==ch){
+                    debugger;
+                    ch = this.peek(1);
+                    if(ch==='}'){
+                        this.trySnatch(2);
+                        this.base();
+                    }
                 }else if(ch==='('){
                     this.roll();
                     this.branch("$push");
                     continue;
-                }else {
-                    if('])'.includes(ch)){
-                        this.tokens.push(this.text.substring(this.tokens.cursor,this.index));
-                        this.base();
-                        this.roll();
-                        continue;
-                    }else if('}'==ch){
-                        ch = this.peek(1);
-                        if(ch==='}'){
-                            this.tokens.push(this.text.substring(this.tokens.cursor,this.index));
-                            this.roll(2);
-                            this.base();
-                            continue;
-                        }
+                }else if(')'===ch){
+                    this.trySnatch();
+                    this.base();
+                    continue;
+                }else{
+                    if(this.tokens.type!=='$load'){
+                        this.branch("$load");
+                    }
+                    if(this.tokens.state === 0){
+                       throw 'error state';
+                    }else if(this.tokens.state===2||!this.tokens.state){
+                        this.tokens.state = 0;
+                    }
+                    if('[].,'.includes(ch)){
+                        this.snatch();
                     }else{
-                        if(this.tokens.type!=='$load'){
-                            this.branch("$load");
-                        }
-                        if('[.'.includes(ch)){
-                            this.tokens.push(this.text.substring(this.tokens.cursor,this.index));
-                            this.roll();
-                        }else{
-                            this.roll();
-                            continue;
-                        }
+                        this.roll();
+                        this.tokens.state = 1;
                     }
                 }
             }
