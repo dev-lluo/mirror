@@ -65,15 +65,15 @@
                 var cv = [];
                 cv.push(
                     'function(context){',
-                    '\tvar data = context;'
+                    'var data=context;'
                 );
                 m.each(tokenGroup,function () {
                     if(m.isOne(this,'String')){
-                        cv.push('data = data["'+this+'"];');
+                        cv.push('data=data["'+this+'"];');
                     }else if(this.type==='$invoke'){
-                        cv.push('data = data('+parse(this)+');');
+                        cv.push('data=data('+parse(this)+');');
                     }else{
-                        cv.push('data = data[('+parse(this)+')(context)];');
+                        cv.push('data=data[('+parse(this)+')(context)];');
                     }
                 });
                 cv.push(
