@@ -6,9 +6,10 @@
     <script src="mirror.base.js"></script>
 </head>
 <body>
-这里使用一个\{\{position.title\}\}作为占位符所以我的title是{{position.title}}@{{name}}-{{[age]}}
+这里使用一个\{\{user.position.title\}\}作为占位符所以我的title是{{user.position.title}}@{{user.name}}-{{user[age]}}(实际年龄)；但是我说我只有{{a.min({{user.age}},12)}}岁
 </body>
 <script>
+    var m = mirror;
     var text = document.body.innerText;
     console.log(text);
     var ESCAPE = {"n": "\n", "f": "\f", "r": "\r", "t": "\t", "v": "\v", "'": "'", '"': '"',"{":"{","}":"}","[":"[","]":"]"},
@@ -27,17 +28,83 @@
         isBracketRChar = function (ch) {
             return ']' === ch;
         },
+        isParenthesisLChar = function(ch){
+            return '(' === ch;
+        },
+        isParenthesisRChar = function(ch){
+            return ')' === ch;
+        },
+        isCommaChar = function (ch) {
+            return ',' === ch;
+        }
         isDotChar = function(ch){
             return '.' === ch;
+        },
+        baseOnImm = function (queue,type) {
+            return queue[0].type === type;
+        },
+        baseOn = function (queue,type) {
+            for(var i = queue.length -1;i>=0;i--){
+                if(queue[i].type === type) return true;
+            }
+            return false;
+        },
+        parser = {
+            $root : function (tokenGroup) {
+                var cv = [];
+                m.each(tokenGroup,function(){
+                    if(m.isOne(this,'String')){
+                        cv.push('"'+this+'"');
+                    }else{
+                        cv.push('('+parse(this)+')(context)');
+                    }
+                });
+                return 'function(context){ return '+cv.join('+')+';}';
+            },
+            $expr : function (tokenGroup) {
+                var cv = [];
+                cv.push(
+                    'function(context){',
+                    '\tvar data = context;'
+                );
+                m.each(tokenGroup,function () {
+                    if(m.isOne(this,'String')){
+                        cv.push('data = data["'+this+'"];');
+                    }else if(this.type==='$invoke'){
+                        cv.push('data = data('+parse(this)+');');
+                    }else{
+                        cv.push('data = data[('+parse(this)+')(context)];');
+                    }
+                });
+                cv.push(
+                    'return data;',
+                    '}'
+                );
+                return cv.join('');
+            },
+            $invoke : function (tokenGroup) {
+                var cv = [];
+                m.each(tokenGroup,function () {
+                    if(m.isOne(this,'String')){
+                        cv.push(this);
+                    }else{
+                        cv.push('('+parse(this)+')(context)');
+                    }
+                });
+                return cv.join(',');
+            }
+        },
+        parse = function (tokenGroup) {
+            return parser[tokenGroup.type](tokenGroup);
         };
 
     function Lexer(text) {
-        mirror.assertDefined(text);
+        m.assertDefined(text);
         this.text = text;
         this.index = 0;
         this.cache = [];
-        this.queue = [];
-        this.tokenGroup = new TokenGroup('$root',0);
+        this.queue = [new TokenGroup('$root')];
+        this.lexed = false;
     }
     Lexer.prototype.peek = function (i) {
         i = i||0;
@@ -49,18 +116,30 @@
     }
     Lexer.prototype.branch = function (type) {
         this.trySnatch();
-        this.queue.push(this.tokenGroup);
-        this.queue[this.queue.length-1].push(this.tokenGroup = new TokenGroup(type,this.index));
+        var tokenGroup = new TokenGroup(type);
+        this.queue[0].push(tokenGroup);
+        this.queue.unshift(tokenGroup);
     }
-    Lexer.prototype.base = function () {
+    Lexer.prototype.base = function (type) {
         this.trySnatch();
-        this.tokenGroup = this.queue.pop();
-        this.tokenGroup.hook = this.index;
+        var tokenGroup = this.queue.shift();
+        if(tokenGroup.type !== type){
+            throw 'lexer error';
+        }
+    }
+    Lexer.prototype.baseOn = function (type,imm) {
+        return imm?baseOnImm(this.queue,type):baseOn(this.queue,type);
+    }
+    Lexer.prototype.clear = function(){
+        if(!this.cache.length)throw 'lexer error';
+        try{
+            return this.cache.join("");
+        }finally {
+            this.cache.length = 0;
+        }
     }
     Lexer.prototype.snatch = function () {
-        if(!this.cache.length)throw 'lexer error';
-        this.tokenGroup.push(this.cache.join(""));
-        this.cache.length = 0;
+        this.queue[0].push(this.clear());
     }
     Lexer.prototype.trySnatch = function () {
         if(this.cache.length){
@@ -68,6 +147,7 @@
         }
     }
     Lexer.prototype.lex = function () {
+        if(this.lexed) return this;
         var ch,needEscape;
         while((ch = this.peek())!==false){
             if(needEscape){
@@ -93,19 +173,25 @@
                 }else if(isBraceRChar(ch)){
                     ch = this.peek(1);
                     if(isBraceRChar(ch)){
-                        this.base();
+                        this.base('$expr');
                         this.roll(2);
                     }else{
                         throw 'unsupported'
                     }
                 }else{
-                    if(this.tokenGroup.type==='$expr'){
+                    if(this.baseOn('$expr')){
                         if(isDotChar(ch)){
                             this.snatch();
                         }else if(isBracketLChar(ch)){
-                            this.branch("$expr");
+                            this.branch('$root');
                         }else if(isBracketRChar(ch)){
-                            this.base();
+                            this.base('$root');
+                        }else if(isParenthesisLChar(ch)){
+                            this.branch('$invoke')
+                        }else if(isParenthesisRChar(ch)){
+                            this.base('$invoke');
+                        }else if(isCommaChar(ch)&&this.baseOn('$invoke',true)){
+                            this.trySnatch();
                         }else{
                             this.cache.push(ch);
                         }
@@ -116,15 +202,27 @@
                 }
             }
         }
+        this.trySnatch();
+        this.lexed = true;
+        return this;
     }
-    function TokenGroup(type,hook){
+    Lexer.prototype.getTokenGroup = function () {
+        if(this.queue.length!==1&&!this.base('$root',true)){
+            throw 'lexer error';
+        }
+        return this.queue[0];
+    }
+    function TokenGroup(type){
         this.type = type;
-        this.hook = hook;
     }
     TokenGroup.prototype = [];
 
+    var c = {a:{max:function(a,b){return a>b?a:b;},min:function(a,b){return a<b?a:b;}},user:{position:{title:'yh'},name:'yh',age:23}};
     var lexer = new Lexer(document.body.innerText);
-    lexer.lex();
-    console.log(lexer.tokenGroup);
+    var tokenGroup = lexer.lex().getTokenGroup();
+    m.log(tokenGroup);
+    var code = parse(tokenGroup);
+    m.log(code);
+    document.body.innerText = Function('return '+code)()(c);
 </script>
 </html>
