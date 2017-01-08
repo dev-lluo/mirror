@@ -8,7 +8,8 @@
 <body>
     <script type="text/template" id="ul">
         <ul>
-            <li></li>
+            <li>{{name}}</li>
+            <li>{{age}}</li>
         </ul>
     </script>
     <script type="text/template" id="ol">
@@ -56,6 +57,6 @@
     var d = mirror.using("mirror.dom");
     mirror.log(d.dom("body"));
     var t = mirror.using("mirror.template");
-    t.ul.renderTo("body ")
+    t.ul.renderTo("body ",{name:'hh',age:'23'});
 </script>
 </html>

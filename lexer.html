@@ -36,7 +36,7 @@
         },
         isCommaChar = function (ch) {
             return ',' === ch;
-        }
+        },
         isDotChar = function(ch){
             return '.' === ch;
         },
@@ -224,5 +224,6 @@
     var code = parse(tokenGroup);
     m.log(code);
     document.body.innerText = Function('return '+code)()(c);
+    m.log(document.body.innerText);
 </script>
 </html>
