@@ -250,6 +250,10 @@
                 'label': ['for'],
                 'input': ['type', 'name', 'value', 'checked', 'disabled', 'src']
             },
+            actionHook = [
+                '$$each',
+                '$$grant'
+            ],
             $textNode = '#text';
 
         function analyzeNode(node) {
