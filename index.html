@@ -22,6 +22,7 @@
     var sizzle = mirror.using("mirror.sizzle");
     mirror.log(sizzle);
     var mocker = mirror.using("mirror.mock");
+
     var mockObject = mocker.mock({name:"x",age:23,friends:["lz","xh","zy"]});
     mocker.watch(mockObject,"set","before",function (event) {
         if(event.value!="xhh") return false;

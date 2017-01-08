@@ -41,7 +41,6 @@
             for (var i = 0; i < argCnt; i++) {
                 args.push("arg" + i);
             }
-            ;
             return args.join(",");
         };
         __MockObject__.prototype.create = function () {

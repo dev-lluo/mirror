@@ -217,47 +217,38 @@
             return Date.now ? Date.now() : new Date().getTime();
         }
     });
-    if (console) {
-        m.extend({
-            log: console.log,
-            info: console.info,
-            warn: console.warn,
-            error: console.error
-        });
-    } else {
-        var cache = [], lock = false;
-        setInterval(function () {
-            if (!lock && cache.length > 10000) {
-                cache.splice(0, cache.length - 5000);
+    var cache = [], lock = false;
+    setInterval(function () {
+        if (!lock && cache.length > 10000) {
+            cache.splice(0, cache.length - 5000);
+        }
+    }, 1000 * 60);
+    m.extend({
+        log: function () {
+            cache.push({type: "log", arguments: arguments});
+        },
+        info: function () {
+            cache.push({type: "info", arguments: arguments});
+        },
+        warn: function () {
+            cache.push({type: "warn", arguments: arguments});
+        },
+        error: function () {
+            cache.push({type: "error", arguments: arguments});
+        },
+        tail: function (count) {
+            lock = true;
+            var temp, count = count || 100;
+            for (count = count > cache.length ? cache.length : count; count > 0; count--) {
+                temp = cache[cache.length - count];
+                console[temp.type].apply(console, temp.arguments);
             }
-        }, 1000 * 60);
-        m.extend({
-            log: function () {
-                cache.push({type: "log", arguments: arguments});
-            },
-            info: function () {
-                cache.push({type: "info", arguments: arguments});
-            },
-            warn: function () {
-                cache.push({type: "warn", arguments: arguments});
-            },
-            error: function () {
-                cache.push({type: "error", arguments: arguments});
-            },
-            tail: function (count) {
-                lock = true;
-                var temp, count = count || 100;
-                for (count = count > cache.length ? cache.length : count; count > 0; count--) {
-                    temp = cache[cache.length - count];
-                    console[temp.type].apply(console, temp.arguments);
-                }
-                lock = false;
-            },
-            clear: function () {
-                cache.splice(0, cache.length);
-            }
-        });
-    }
+            lock = false;
+        },
+        clear: function () {
+            cache.splice(0, cache.length);
+        }
+    });
 
     m.extend({
         trace: function (count) {
