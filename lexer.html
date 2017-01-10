@@ -26,10 +26,9 @@
     Context.prototype.pop = function () {
         return this[--this.length];
     }
-    Context.prototype.invoke = function (keys, args) {
-        var pointer = this.length, cursor = 1,
-            current,prevData, data, i;
-        debugger
+    Context.prototype.invoke = function (keys) {
+        var pointer = this.length, cursor = 1, args = keys.pop(),
+        current, prevData, data, i;
         for (; current = this[pointer - cursor++];) {
             data = current;
             i = 0;
@@ -40,6 +39,7 @@
             if (i === keys.length) break;
         }
         this.push(data.apply(prevData, args));
+        return this;
     }
     Context.prototype.load = function (keys) {
         var pointer = this.length, cursor = 1,
@@ -53,6 +53,7 @@
             if (i === keys.length) break;
         }
         this.push(data);
+        return this;
     }
 
     var m = mirror;
@@ -109,57 +110,36 @@
         },
         parser = {
             $root: function (tokenGroup) {
-                var cv = [];
-                m.each(tokenGroup, function () {
-                    if (m.isOne(this, 'String')) {
-                        cv.push('"' + this + '"');
-                    } else {
-                        cv.push('(' + parse(this) + ')()');
-                    }
-                });
-                return 'function(){ return ' + cv.join('+') + ';}';
+                return 'function(){ return ' + parser.$(tokenGroup).join('+') + ';}';
             },
             $expr: function (tokenGroup) {
-                var cv = [];
-                m.each(tokenGroup, function () {
-                    if (m.isOne(this, 'String')) {
-                        cv.push('"' + this + '"');
-                    } else {
-                        cv.push('(' + parse(this) + ')()');
-                    }
-                });
-                return "function(){context.load([" + cv.join(',') + "]);return context.pop();}";
+                return "function(){return context.load([" + parser.$(tokenGroup).join(',') + "]).pop();}";
             },
             $invoke: function (tokenGroup) {
-                var cv = [];
+                return "function(){return context.invoke([" + parser.$(tokenGroup).join(',') + "]).pop();}";
+            },
+            $args: function (tokenGroup) {
+                return 'function(){return [' + parser.$(tokenGroup).join(',') + '];}';
+            },
+            $v: function (tokenGroup) {
+                return '"' + tokenGroup + '"';
+            },
+            $: function (tokenGroup, mg) {
+                var cv = [], mg = mg || 0;
                 m.each(tokenGroup, function () {
                     if (m.isOne(this, 'String')) {
-                        cv.push('"' + this + '"');
+                        cv.push(parse(this));
                     } else {
                         cv.push('(' + parse(this) + ')()');
                     }
                 }, function (index) {
-                    return index < tokenGroup.length - 1;
+                    return index < tokenGroup.length - mg;
                 });
-                return "function(){context.invoke([" + cv.join(',') + "]," + parse(tokenGroup[tokenGroup.length - 1]) + "); return context.pop();}";
-            },
-            $args: function (tokenGroup) {
-                var cv = [];
-                m.each(tokenGroup, function () {
-                    if (m.isOne(this, 'String')) {
-                        cv.push(this);
-                    } else {
-                        cv.push('(' + parse(this) + ')()');
-                    }
-                });
-                return '[' + cv.join(',') + ']';
-            },
-            $: function (tokenGroup) {
-                return '"' + tokenGroup + '"';
+                return cv;
             }
         },
         parse = function (tokenGroup) {
-            return !parser[tokenGroup.type] ? parser.$(tokenGroup) : parser[tokenGroup.type](tokenGroup);
+            return !tokenGroup.type ? parser.$v(tokenGroup) : parser[tokenGroup.type](tokenGroup);
         };
 
     function Lexer(text) {
@@ -294,9 +274,24 @@
     var code = parse(tokenGroup);
     m.log(code);
 
-        var test = Function('data', 'var context = new Context({min:function(a,b){return a<b?a:b;}}); context.push(data); return (' + code + ')();');
-        document.body.innerText = test(c);
+    var test = Function('data', 'var context = new Context({min:function(a,b){return a<b?a:b;}}); context.push(data); return (' + code + ')();');
+    document.body.innerText = test(c);
 
 
+    function a() {
+        return "这里使用一个{{user.position.title}}作为占位符所以我的title是" + (function () {
+                return context.load(["user", "position", "title"]).pop();
+            })() + "@" + (function () {
+                return context.load(["user", "name"]).pop();
+            })() + "-" + (function () {
+                return context.load(["user", (function () {
+                    return "age";
+                })()]).pop();
+            })() + "(实际年龄)；但是我说我只有" + (function () {
+                return context.invoke(["min", ([(function () {
+                    return context.load(["user", "age"]).pop();
+                })(), "12"])()]).pop();
+            })() + "岁";
+    }
 </script>
 </html>
