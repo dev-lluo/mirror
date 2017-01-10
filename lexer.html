@@ -124,16 +124,14 @@
             $v: function (tokenGroup) {
                 return '"' + tokenGroup + '"';
             },
-            $: function (tokenGroup, mg) {
-                var cv = [], mg = mg || 0;
+            $: function (tokenGroup) {
+                var cv = [];
                 m.each(tokenGroup, function () {
                     if (m.isOne(this, 'String')) {
                         cv.push(parse(this));
                     } else {
                         cv.push('(' + parse(this) + ')()');
                     }
-                }, function (index) {
-                    return index < tokenGroup.length - mg;
                 });
                 return cv;
             }
