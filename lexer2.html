@@ -5,6 +5,22 @@
     <title>Lexer2</title>
     <script src="mirror.base.js"></script>
 </head>
+<!--
+text
+info:{{info}}
+title:{{position.title}}
+url1:{{url[0]}}
+show:{{title["length"]}}
+url:{{url[{{selected}}]}}
+url:{{url["{{selected}}"]}}
+max:{{(12,{{age}})max}}
+==================================================
+$root   root | "                    $text | $expr
+$text   root.start.letter
+$expr   {{                          $route | $args
+$route  $expr.start.letter|.|[      $expr
+$args   (                           $text | $expr
+-->
 <body>
 
 </body>
