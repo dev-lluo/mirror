@@ -28,7 +28,7 @@
     }
     Context.prototype.invoke = function (keys) {
         var pointer = this.length, cursor = 1, args = keys.pop(),
-        current, prevData, data, i;
+            current, prevData, data, i;
         for (; current = this[pointer - cursor++];) {
             data = current;
             i = 0;
@@ -114,6 +114,9 @@
             },
             $expr: function (tokenGroup) {
                 return "function(){return context.load([" + parser.$(tokenGroup).join(',') + "]).pop();}";
+            },
+            $points: function(tokenGroup){
+                return 'function(){return ' + parser.$(tokenGroup).join('') + ';}';
             },
             $invoke: function (tokenGroup) {
                 return "function(){return context.invoke([" + parser.$(tokenGroup).join(',') + "]).pop();}";
@@ -230,9 +233,9 @@
                         if (isDotChar(ch)) {
                             this.snatch();
                         } else if (isBracketLChar(ch)) {
-                            this.branch('$root');
+                            this.branch('$points');
                         } else if (isBracketRChar(ch)) {
-                            this.base('$root');
+                            this.base('$points');
                         } else if (isParenthesisLChar(ch)) {
                             this.mutate("$invoke");
                             this.branch('$args');
@@ -276,20 +279,5 @@
     document.body.innerText = test(c);
 
 
-    function a() {
-        return "这里使用一个{{user.position.title}}作为占位符所以我的title是" + (function () {
-                return context.load(["user", "position", "title"]).pop();
-            })() + "@" + (function () {
-                return context.load(["user", "name"]).pop();
-            })() + "-" + (function () {
-                return context.load(["user", (function () {
-                    return "age";
-                })()]).pop();
-            })() + "(实际年龄)；但是我说我只有" + (function () {
-                return context.invoke(["min", ([(function () {
-                    return context.load(["user", "age"]).pop();
-                })(), "12"])()]).pop();
-            })() + "岁";
-    }
 </script>
 </html>
