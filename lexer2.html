@@ -25,8 +25,59 @@ $args   (                           $text | $expr
 
 </body>
 <script>
+    function Token (type){
+        this.type = type;
+    }
     function Lexer (text) {
         this.text = text;
+        this.cursor = 0;
     }
+    function pushToken(stack,token){
+        stack.push(token);
+    }
+    function popToken(stack){
+        return stack.pop();
+    }
+    Lexer.prototype = {
+        peek : function(i){
+            i = i||0;
+            return this.text[this.cursor+i]||false;
+        },
+        roll : function (i) {
+            i = i||1;
+            this.cursor = this.cursor+i;
+        },
+        lex : function () {
+            if(!this.token){
+                var ch,
+                    stack = [],
+                    current;
+                while(ch = this.peek()){
+                    switch (current.type) {
+                        case "string":{
+
+                        }break;
+                        case "expr":{
+
+                        }break;
+                        case "route":{
+
+                        }break;
+                        case "args":{
+
+                        }break;
+                        default :{
+                            if(!stack.length){
+                                if(ch==='{'){
+
+                                }
+                            }
+                        }break;
+                    }
+                }
+            }
+            return this;
+        }
+    };
 </script>
 </html>
